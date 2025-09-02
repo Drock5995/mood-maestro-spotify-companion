@@ -1,16 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { SpotifyAPI, SpotifyUser, SpotifyPlaylist } from '@/lib/spotify';
+import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, PlaylistWithTracks, MoodAnalysis } from '@/lib/spotify';
+import { analyzePlaylistMood, MOOD_CATEGORIES } from '@/lib/mood-analysis';
+import { PlaylistMoodModal } from '@/components/PlaylistMoodModal';
 
 const spotify = new SpotifyAPI();
 
-export default function Dashboard() {
+function DashboardContent() {
   const [user, setUser] = useState<SpotifyUser | null>(null);
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistWithTracks | null>(null);
+  const [moodAnalysis, setMoodAnalysis] = useState<MoodAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showMoodModal, setShowMoodModal] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -68,6 +74,34 @@ export default function Dashboard() {
     router.push('/');
   };
 
+  const handleAnalyzePlaylist = async (playlist: SpotifyPlaylist) => {
+    setIsAnalyzing(true);
+    setError(null);
+    
+    try {
+      // Fetch detailed playlist data with tracks and audio features
+      const playlistWithDetails = await spotify.getPlaylistWithDetails(playlist.id);
+      
+      // Analyze mood based on audio features
+      const analysis = analyzePlaylistMood(playlistWithDetails.audioFeatures || []);
+      
+      setSelectedPlaylist(playlistWithDetails);
+      setMoodAnalysis(analysis);
+      setShowMoodModal(true);
+    } catch (error) {
+      console.error('Error analyzing playlist:', error);
+      setError('Failed to analyze playlist mood. Please try again.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const closeMoodModal = () => {
+    setShowMoodModal(false);
+    setSelectedPlaylist(null);
+    setMoodAnalysis(null);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-900 via-black to-green-800 flex items-center justify-center">
@@ -99,6 +133,18 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-900 via-black to-green-800">
       <div className="container mx-auto px-4 py-8">
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 bg-red-900/50 border border-red-700 rounded-lg p-4">
+            <p className="text-red-200">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="mt-2 text-red-400 hover:text-red-300 text-sm underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -155,9 +201,28 @@ export default function Dashboard() {
                 <p className="text-gray-300 text-sm mb-2 line-clamp-2">
                   {playlist.description || 'No description'}
                 </p>
-                <p className="text-green-400 text-sm">
+                <p className="text-green-400 text-sm mb-3">
                   {playlist.tracks.total} track{playlist.tracks.total !== 1 ? 's' : ''}
                 </p>
+                
+                {/* Mood Analysis Button */}
+                <button
+                  onClick={() => handleAnalyzePlaylist(playlist)}
+                  disabled={isAnalyzing}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 text-white px-4 py-2 rounded-full transition-all duration-200 text-sm font-medium flex items-center justify-center space-x-2"
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Analyzing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>🎨</span>
+                      <span>Analyze Mood</span>
+                    </>
+                  )}
+                </button>
               </div>
             ))}
           </div>
@@ -168,11 +233,36 @@ export default function Dashboard() {
             </svg>
             <h3 className="text-xl font-semibold text-white mb-2">No playlists found</h3>
             <p className="text-gray-300">
-              Create some playlists in Spotify and they'll appear here!
+              Create some playlists in Spotify and they&apos;ll appear here!
             </p>
           </div>
         )}
       </div>
+
+      {/* Mood Analysis Modal */}
+      {selectedPlaylist && moodAnalysis && (
+        <PlaylistMoodModal
+          playlist={selectedPlaylist}
+          analysis={moodAnalysis}
+          isOpen={showMoodModal}
+          onClose={closeMoodModal}
+        />
+      )}
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-green-900 via-black to-green-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <p className="text-green-100 text-lg">Loading your music dashboard...</p>
+        </div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }

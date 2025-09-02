@@ -44,7 +44,7 @@ export default function Home() {
           </p>
           <p className="text-gray-300 max-w-md mx-auto">
             Connect with Spotify to see your playlists and discover music that matches your vibe. 
-            Because life's too short for songs that don't speak to your soul.
+            Because life&apos;s too short for songs that don&apos;t speak to your soul.
           </p>
         </div>
 
@@ -70,7 +70,7 @@ export default function Home() {
           </button>
           
           <p className="text-sm text-gray-400">
-            We'll only access your playlists and profile info. 
+            We&apos;ll only access your playlists and profile info. 
             Your music taste secrets are safe with us. 🤐
           </p>
         </div>
