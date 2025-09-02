@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ashley's Music Mood App
 
-## Getting Started
+A personalized Spotify companion that helps you discover and organize music based on your mood. Built with Next.js, Tailwind CSS, and the Spotify Web API.
 
-First, run the development server:
+## Features
+
+- 🎵 Connect with your Spotify account
+- 📋 View all your playlists in a beautiful interface  
+- 🎨 Clean, professional UI with subtle personality
+- 🔐 Secure OAuth 2.0 authentication
+- 📱 Responsive design for all devices
+
+## Setup Instructions
+
+### 1. Spotify Developer App Setup
+
+1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Create a new app or use an existing one
+3. Note down your **Client ID** and **Client Secret**
+4. Add these redirect URIs:
+   - Development: `http://localhost:3000/api/callback`
+   - Production: `https://your-netlify-domain.netlify.app/api/callback`
+
+### 2. Environment Variables
+
+1. Copy `.env.local` and update the values:
+
+```env
+NEXT_PUBLIC_SPOTIFY_CLIENT_ID=your_spotify_client_id_here
+SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
+```
+
+### 3. Install Dependencies
+
+```bash
+npm install
+```
+
+### 4. Run Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the app.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment (Netlify)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Connect your GitHub repository to Netlify
+2. Set build command: `npm run build`
+3. Set publish directory: `.next`
+4. Add environment variables in Netlify dashboard:
+   - `NEXT_PUBLIC_SPOTIFY_CLIENT_ID`
+   - `SPOTIFY_CLIENT_SECRET`
+5. Update your Spotify app's redirect URI to your Netlify domain
 
-## Learn More
+## Architecture
 
-To learn more about Next.js, take a look at the following resources:
+```
+User Authentication Flow:
+1. User clicks "Connect with Spotify"
+2. Redirected to Spotify OAuth
+3. User authorizes the app
+4. Spotify redirects back with auth code
+5. App exchanges code for access token
+6. Token stored in localStorage
+7. Dashboard displays user's playlists
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Tech Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Frontend**: Next.js 15, React 19, Tailwind CSS
+- **Authentication**: Spotify Web API OAuth 2.0
+- **Deployment**: Netlify
+- **State Management**: React hooks + localStorage
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+├── src/
+│   ├── app/
+│   │   ├── api/callback/     # OAuth callback handler
+│   │   ├── dashboard/        # Playlist view page
+│   │   └── page.tsx          # Landing page
+├── lib/
+│   └── spotify.ts           # Spotify API wrapper
+├── public/                  # Static assets
+└── netlify.toml            # Deployment config
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Generated with [Memex](https://memex.tech)
