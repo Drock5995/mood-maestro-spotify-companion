@@ -146,7 +146,11 @@ export class SpotifyAPI {
       console.error(`Status: ${response.status}, Status Text: ${response.statusText}`);
       try {
         const parsedError = JSON.parse(errorBody);
-        console.error(`Response Body (parsed):`, parsedError);
+        if (parsedError.error && parsedError.error.message) {
+          console.error(`Response Body (parsed error message):`, parsedError.error.message);
+        } else {
+          console.error(`Response Body (parsed full object):`, JSON.stringify(parsedError, null, 2));
+        }
       } catch (e) {
         console.error(`Response Body (raw):`, errorBody);
       }
