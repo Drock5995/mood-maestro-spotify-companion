@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SpotifyAPI, SpotifyTokenResponse } from '@/lib/spotify';
+import { SpotifyTokenResponse } from '@/lib/spotify'; // Removed SpotifyAPI import
 // Removed: import { Buffer } from 'buffer'; // This line is removed
 
 // Helper function for token exchange, now local to this server-side route

@@ -173,8 +173,8 @@ export class SpotifyAPI {
       // Spotify might not return a new refresh token, so keep the old one if not provided
       this.setAccessToken(tokenData.access_token, tokenData.refresh_token || this.refreshToken, tokenData.expires_in);
       console.log('Access token refreshed successfully via API route.');
-    } catch (error) {
-      console.error('Error refreshing access token via API route:', error);
+    } catch (error: unknown) { // Changed 'e' to 'error: unknown'
+      console.error('Error refreshing access token via API route:', error instanceof Error ? error.message : String(error));
       this.clearTokens();
       throw error;
     }
@@ -225,7 +225,7 @@ export class SpotifyAPI {
         } else {
           console.error(`[SpotifyAPI] Response Body (parsed full object):`, JSON.stringify(parsedError, null, 2));
         }
-      } catch (e) {
+      } catch (error: unknown) { // Changed 'e' to 'error: unknown'
         console.error(`[SpotifyAPI] Response Body (raw):`, errorBody);
       }
 

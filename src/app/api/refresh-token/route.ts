@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
 
     const tokenData = await response.json();
     return NextResponse.json(tokenData);
-  } catch (error: any) {
-    console.error('Error in refresh-token API route:', error);
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+  } catch (error: unknown) { // Changed 'any' to 'unknown'
+    console.error('Error in refresh-token API route:', error instanceof Error ? error.message : String(error));
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal server error' }, { status: 500 });
   }
 }
