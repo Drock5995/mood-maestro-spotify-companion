@@ -32,12 +32,8 @@ function DashboardContent() {
         if (accessToken) {
           console.log('Received access token:', accessToken.substring(0, 10) + '...'); // Log first 10 chars
           console.log('Received expires_in:', expiresIn);
-          spotify.setAccessToken(accessToken);
-          if (refreshToken) localStorage.setItem('spotify_refresh_token', refreshToken);
-          if (expiresIn) {
-            const expiresAt = Date.now() + parseInt(expiresIn) * 1000;
-            localStorage.setItem('spotify_token_expires_at', expiresAt.toString());
-          }
+          // Use the enhanced setAccessToken method
+          spotify.setAccessToken(accessToken, refreshToken || undefined, expiresIn ? parseInt(expiresIn) : undefined);
           window.history.replaceState({}, '', '/dashboard');
         }
 
