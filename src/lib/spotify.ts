@@ -192,11 +192,11 @@ export class SpotifyAPI {
 
   private async makeRequest<T>(endpoint: string, options?: RequestInit, retry = true): Promise<T> {
     if (this.isTokenExpired()) {
-      console.log('Access token expired or near expiry, attempting to refresh...');
+      console.log('[SpotifyAPI] Access token expired or near expiry, attempting to refresh...');
       try {
         await this.refreshAccessToken();
       } catch (refreshError) {
-        console.error('Failed to refresh token, redirecting to login.', refreshError);
+        console.error('[SpotifyAPI] Failed to refresh token, redirecting to login.', refreshError);
         this.clearTokens();
         // Redirect to login page if refresh fails
         if (typeof window !== 'undefined') {
@@ -210,7 +210,11 @@ export class SpotifyAPI {
       throw new Error('No access token available after refresh attempt.');
     }
 
-    console.log(`Making request to ${endpoint} with token: ${this.accessToken.substring(0, 10)}...`);
+    console.log(`[SpotifyAPI] Making request to ${endpoint}`);
+    console.log(`[SpotifyAPI] Using access token (first 10 chars): ${this.accessToken.substring(0, 10)}...`);
+    console.log(`[SpotifyAPI] Token expires at: ${this.tokenExpiresAt ? new Date(this.tokenExpiresAt).toLocaleString() : 'N/A'}`);
+    console.log(`[SpotifyAPI] Current time: ${new Date().toLocaleString()}`);
+
     const response = await fetch(`${SPOTIFY_BASE_URL}${endpoint}`, {
       ...options,
       headers: {
@@ -222,28 +226,28 @@ export class SpotifyAPI {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error(`Spotify API request failed: ${endpoint}`);
-      console.error(`Status: ${response.status}, Status Text: ${response.statusText}`);
+      console.error(`[SpotifyAPI] Spotify API request failed: ${endpoint}`);
+      console.error(`[SpotifyAPI] Status: ${response.status}, Status Text: ${response.statusText}`);
       try {
         const parsedError = JSON.parse(errorBody);
         if (parsedError.error && parsedError.error.message) {
-          console.error(`Response Body (parsed error message):`, parsedError.error.message);
+          console.error(`[SpotifyAPI] Response Body (parsed error message):`, parsedError.error.message);
         } else {
-          console.error(`Response Body (parsed full object):`, JSON.stringify(parsedError, null, 2));
+          console.error(`[SpotifyAPI] Response Body (parsed full object):`, JSON.stringify(parsedError, null, 2));
         }
       } catch (e) {
-        console.error(`Response Body (raw):`, errorBody);
+        console.error(`[SpotifyAPI] Response Body (raw):`, errorBody);
       }
 
       if (response.status === 401 && retry) {
-        console.warn('Received 401 Unauthorized. Attempting token refresh and retrying request...');
+        console.warn('[SpotifyAPI] Received 401 Unauthorized. Attempting token refresh and retrying request...');
         this.clearTokens(); // Clear potentially bad token
         try {
           await this.refreshAccessToken();
           // Retry the original request with the new token
           return this.makeRequest<T>(endpoint, options, false); // Do not retry again to prevent infinite loop
         } catch (refreshError) {
-          console.error('Failed to refresh token after 401, redirecting to login.', refreshError);
+          console.error('[SpotifyAPI] Failed to refresh token after 401, redirecting to login.', refreshError);
           if (typeof window !== 'undefined') {
             window.location.href = '/';
           }
