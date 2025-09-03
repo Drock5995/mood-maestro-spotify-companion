@@ -141,12 +141,16 @@ export class SpotifyAPI {
     });
 
     if (!response.ok) {
+      const errorBody = await response.text(); // Get the raw error body
+      console.error(`Spotify API request failed: ${endpoint}`);
+      console.error(`Status: ${response.status}, Status Text: ${response.statusText}`);
+      console.error(`Response Body: ${errorBody}`);
+
       if (response.status === 401) {
-        // Token expired, clear tokens and redirect to login
         this.clearTokens();
         throw new Error('Token expired');
       }
-      throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
+      throw new Error(`Spotify API error: ${response.status} ${response.statusText} - ${errorBody}`);
     }
 
     return response.json();
