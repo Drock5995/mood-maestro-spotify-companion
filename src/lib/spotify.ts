@@ -284,8 +284,13 @@ export class SpotifyAPI {
   }
 
   async getAudioFeatures(trackIds: string[]): Promise<SpotifyAudioFeatures[]> {
-    if (trackIds.length === 0) return [];
+    if (trackIds.length === 0) {
+      console.log('[SpotifyAPI] No track IDs provided for audio features request.');
+      return [];
+    }
     
+    console.log(`[SpotifyAPI] Requesting audio features for ${trackIds.length} tracks. First 5 IDs:`, trackIds.slice(0, 5));
+
     const chunks = [];
     for (let i = 0; i < trackIds.length; i += 100) {
       chunks.push(trackIds.slice(i, i + 100));
@@ -314,7 +319,7 @@ export class SpotifyAPI {
       this.getPlaylistTracks(playlistId)
     ]);
     
-    const trackIds = tracks.map(track => track.id);
+    const trackIds = tracks.map(track => track.id).filter(id => id); // Filter out any null/undefined IDs
     const audioFeatures = trackIds.length > 0 ? await this.getAudioFeatures(trackIds) : [];
     
     return {
