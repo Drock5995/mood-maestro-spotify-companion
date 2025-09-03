@@ -26,10 +26,13 @@ function DashboardContent() {
     const initializeUser = async () => {
       try {
         const accessToken = searchParams.get('access_token');
+        const refreshToken = searchParams.get('refresh_token');
+        const expiresIn = searchParams.get('expires_in');
+
         if (accessToken) {
+          console.log('Received access token:', accessToken.substring(0, 10) + '...'); // Log first 10 chars
+          console.log('Received expires_in:', expiresIn);
           spotify.setAccessToken(accessToken);
-          const refreshToken = searchParams.get('refresh_token');
-          const expiresIn = searchParams.get('expires_in');
           if (refreshToken) localStorage.setItem('spotify_refresh_token', refreshToken);
           if (expiresIn) {
             const expiresAt = Date.now() + parseInt(expiresIn) * 1000;

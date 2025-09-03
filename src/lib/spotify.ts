@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer'; // Explicitly import Buffer
 export interface SpotifyUser {
   id: string;
   display_name: string;
@@ -144,7 +145,7 @@ export class SpotifyAPI {
         this.clearTokens();
         throw new Error('Token expired');
       }
-      throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
+      throw new new Error(`Spotify API error: ${response.status} ${response.statusText}`);
     }
 
     return response.json();
