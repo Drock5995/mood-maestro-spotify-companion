@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image'; // Import Image component
 import { PlaylistWithTracks, MoodAnalysis, SpotifyAudioFeatures } from '@/lib/spotify';
 import { MoodCard } from './MoodCard';
 
@@ -26,9 +27,11 @@ export const PlaylistMoodModal: React.FC<PlaylistMoodModalProps> = ({
         <div className="sticky top-0 bg-gray-900 border-b border-gray-800 p-6 flex items-start justify-between">
           <div className="flex items-start space-x-4">
             {playlist.images?.[0] && (
-              <img
+              <Image
                 src={playlist.images[0].url}
                 alt={playlist.name}
+                width={64}
+                height={64}
                 className="w-16 h-16 rounded-lg"
               />
             )}
@@ -65,12 +68,14 @@ export const PlaylistMoodModal: React.FC<PlaylistMoodModalProps> = ({
               <div className="space-y-3">
                 {playlist.trackDetails?.slice(0, 10).map((track, index) => (
                   <div key={track.id} className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center relative">
                       {track.album.images?.[0] ? (
-                        <img
+                        <Image
                           src={track.album.images[0].url}
                           alt={track.album.name}
-                          className="w-full h-full rounded object-cover"
+                          fill
+                          sizes="32px"
+                          className="rounded object-cover"
                         />
                       ) : (
                         <span className="text-gray-500 text-xs">{index + 1}</span>

@@ -2,10 +2,11 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image'; // Import Image component
 import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, PlaylistWithTracks, MoodAnalysis } from '@/lib/spotify';
 import { analyzePlaylistMood } from '@/lib/mood-analysis';
 import { PlaylistMoodModal } from '@/components/PlaylistMoodModal';
-import { supabase } from '@/integrations/supabase/client';
+// import { supabase } from '@/integrations/supabase/client'; // Removed unused import
 
 const spotify = new SpotifyAPI();
 
@@ -121,9 +122,11 @@ function DashboardContent() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
             {user?.images?.[0] && (
-              <img
+              <Image
                 src={user.images[0].url}
-                alt={user.display_name}
+                alt={user.display_name || 'User avatar'}
+                width={48}
+                height={48}
                 className="w-12 h-12 rounded-full border-2 border-green-500"
               />
             )}
@@ -151,12 +154,14 @@ function DashboardContent() {
                 key={playlist.id}
                 className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 hover:bg-gray-700/50 transition-all duration-200 border border-gray-700/50 hover:border-green-500/50"
               >
-                <div className="aspect-square mb-4 rounded-lg overflow-hidden bg-gray-700">
+                <div className="aspect-square mb-4 rounded-lg overflow-hidden bg-gray-700 relative">
                   {playlist.images?.[0] ? (
-                    <img
+                    <Image
                       src={playlist.images[0].url}
                       alt={playlist.name}
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="object-cover"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
