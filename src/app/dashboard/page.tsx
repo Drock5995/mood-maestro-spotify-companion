@@ -73,39 +73,15 @@ function DashboardContent() {
 
     try {
       const playlistWithDetails = await spotify.getPlaylistWithDetails(playlist.id);
-      const initialAnalysis = analyzePlaylistMood(playlistWithDetails.audioFeatures || []);
+      const analysis = analyzePlaylistMood(playlistWithDetails.audioFeatures || []);
 
       setSelectedPlaylist(playlistWithDetails);
-      setMoodAnalysis({
-        ...initialAnalysis,
-        description: "Our AI is crafting a special description for this vibe...",
-      });
+      setMoodAnalysis(analysis);
       setShowMoodModal(true);
-
-      // Asynchronously call the AI for a better description
-      const { data, error: functionError } = await supabase.functions.invoke('openai-mood-description', {
-        body: {
-          moodData: initialAnalysis.audio_characteristics,
-          primaryMood: initialAnalysis.overall_mood,
-          playlistName: playlist.name,
-        },
-      });
-
-      if (functionError) throw functionError;
-
-      if (data.description) {
-        setMoodAnalysis(prev => prev ? { ...prev, description: data.description } : null);
-      }
     } catch (err) {
       console.error('Error during mood analysis:', err);
-      // Fallback to the original, non-AI analysis if anything fails
-      if (selectedPlaylist) {
-        const fallbackAnalysis = analyzePlaylistMood(selectedPlaylist.audioFeatures || []);
-        setMoodAnalysis(fallbackAnalysis);
-      } else {
-        setError('Failed to analyze playlist mood. Please try again.');
-        setShowMoodModal(false);
-      }
+      setError('Failed to analyze playlist mood. Please try again.');
+      setShowMoodModal(false);
     } finally {
       setAnalyzingPlaylistId(null);
     }

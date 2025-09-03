@@ -97,8 +97,8 @@ export function analyzePlaylistMood(audioFeatures: SpotifyAudioFeatures[]): Mood
   // Get mood category
   const moodCategory = MOOD_CATEGORIES[primaryMood];
   
-  // Generate description
-  const description = generateMoodDescription(primaryMood, avgFeatures, moodScores);
+  // Generate a much smarter, template-based description
+  const description = generateSmarterDescription(primaryMood, avgFeatures);
   
   return {
     overall_mood: primaryMood,
@@ -159,43 +159,34 @@ function calculateMoodScores(avgFeatures: ReturnType<typeof calculateAverageFeat
   };
 }
 
-function generateMoodDescription(
+function generateSmarterDescription(
   primaryMood: string, 
-  avgFeatures: ReturnType<typeof calculateAverageFeatures>,
-  moodScores: Record<string, number>
+  avgFeatures: ReturnType<typeof calculateAverageFeatures>
 ): string {
-  const moodCategory = MOOD_CATEGORIES[primaryMood];
-  const secondaryMoods = Object.entries(moodScores)
-    .filter(([mood]) => mood !== primaryMood)
-    .sort(([,a], [,b]) => b - a)
-    .slice(0, 2)
-    .map(([mood]) => mood);
-
-  const tempoDesc = avgFeatures.tempo > 140 ? 'fast-paced' : 
-                   avgFeatures.tempo > 100 ? 'moderate tempo' : 'slow-paced';
+  const moodName = MOOD_CATEGORIES[primaryMood].name.toLowerCase();
   
-  const energyDesc = avgFeatures.energy > 0.7 ? 'high-energy' :
-                    avgFeatures.energy > 0.4 ? 'medium-energy' : 'low-energy';
+  // Describe the core feeling
+  let coreDesc = `This playlist has a distinctly ${moodName} vibe. `;
+  if (avgFeatures.valence > 0.75) coreDesc += "It's packed with overwhelmingly positive and uplifting tracks. ";
+  if (avgFeatures.valence < 0.25) coreDesc += "It leans into a deeply introspective and somber soundscape. ";
 
-  let description = `This playlist has a ${moodCategory.name.toLowerCase()} vibe with ${energyDesc}, ${tempoDesc} tracks.`;
-  
-  if (secondaryMoods.length > 0) {
-    const secondaryDesc = secondaryMoods.map(mood => MOOD_CATEGORIES[mood].name.toLowerCase()).join(' and ');
-    description += ` It also carries ${secondaryDesc} undertones.`;
-  }
+  // Describe the energy and tempo
+  let energyDesc = "";
+  if (avgFeatures.energy > 0.8) energyDesc = "Expect a high-octane, powerful listening experience";
+  else if (avgFeatures.energy < 0.3) energyDesc = "Perfect for winding down, with a very mellow and relaxed energy";
+  else energyDesc = "It strikes a balance with moderate energy";
 
-  // Add specific insights based on audio features
-  if (avgFeatures.acousticness > 0.6) {
-    description += ' Features predominantly acoustic instrumentation.';
-  }
-  if (avgFeatures.danceability > 0.7) {
-    description += ' Perfect for dancing and movement.';
-  }
-  if (avgFeatures.valence > 0.8) {
-    description += ' Exceptionally uplifting and positive.';
-  }
+  if (avgFeatures.tempo > 130) energyDesc += " and a fast, driving tempo. ";
+  else if (avgFeatures.tempo < 90) energyDesc += " and a slower, more deliberate pace. ";
+  else energyDesc += ". ";
 
-  return description;
+  // Add an interesting detail
+  let detailDesc = "";
+  if (avgFeatures.danceability > 0.75) detailDesc = "With its high danceability, you might find it hard to sit still. ";
+  if (avgFeatures.acousticness > 0.7) detailDesc = "The sound is predominantly acoustic, giving it a raw and organic feel. ";
+  if (avgFeatures.instrumentalness > 0.6) detailDesc = "It's heavily instrumental, letting the music itself do all the talking. ";
+
+  return coreDesc + energyDesc + detailDesc;
 }
 
 function getDefaultMoodAnalysis(): MoodAnalysis {
