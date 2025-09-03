@@ -38,7 +38,7 @@ export const MoodCard: React.FC<MoodCardProps> = ({ analysis, className = '' }) 
         <h4 className="text-sm font-semibold text-gray-300 uppercase tracking-wide">
           Mood Breakdown
         </h4>
-        {Object.entries(analysis.mood_scores)
+        {(Object.entries(analysis.mood_scores) as [string, number][])
           .sort(([,a], [,b]) => b - a)
           .slice(0, 4)
           .map(([mood, score]) => {

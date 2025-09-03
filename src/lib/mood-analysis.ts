@@ -1,5 +1,7 @@
 import { SpotifyAudioFeatures, MoodAnalysis } from './spotify';
 
+export type { MoodAnalysis };
+
 export interface MoodCategory {
   name: string;
   description: string;
