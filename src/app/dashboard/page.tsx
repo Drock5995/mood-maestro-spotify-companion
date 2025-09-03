@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, PlaylistWithTracks, MoodAnalysis } from '@/lib/spotify';
-import { analyzePlaylistMood, MOOD_CATEGORIES } from '@/lib/mood-analysis';
+import { analyzePlaylistMood } from '@/lib/mood-analysis';
 import { PlaylistMoodModal } from '@/components/PlaylistMoodModal';
 
 const spotify = new SpotifyAPI();

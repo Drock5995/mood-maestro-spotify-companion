@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { PlaylistWithTracks, MoodAnalysis } from '@/lib/spotify';
+import { PlaylistWithTracks, MoodAnalysis, SpotifyAudioFeatures } from '@/lib/spotify';
 import { MoodCard } from './MoodCard';
 
 interface PlaylistMoodModalProps {
@@ -178,7 +178,10 @@ const AnalysisMetric: React.FC<{
 );
 
 // Helper function to calculate average feature
-function getAverageFeature(features: any[], featureName: string): number {
+function getAverageFeature(
+  features: SpotifyAudioFeatures[],
+  featureName: keyof Omit<SpotifyAudioFeatures, 'id'>
+): number {
   if (features.length === 0) return 0;
   const sum = features.reduce((acc, feature) => acc + (feature[featureName] || 0), 0);
   return sum / features.length;
