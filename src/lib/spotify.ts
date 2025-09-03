@@ -1,4 +1,4 @@
-import { Buffer } from 'buffer'; // Import Buffer for client_secret encoding
+// Removed: import { Buffer } from 'buffer'; // Buffer is no longer needed client-side
 
 export interface SpotifyUser {
   id: string;
@@ -152,29 +152,19 @@ export class SpotifyAPI {
       throw new Error('No refresh token available. Please log in again.');
     }
 
-    const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-
-    if (!clientId || !clientSecret) {
-      throw new Error('Spotify client credentials not configured for token refresh.');
-    }
-
     try {
-      const response = await fetch('https://accounts.spotify.com/api/token', {
+      // Call the new server-side API route to refresh the token
+      const response = await fetch('/api/refresh-token', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+          'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({
-          grant_type: 'refresh_token',
-          refresh_token: this.refreshToken,
-        }),
+        body: JSON.stringify({ refreshToken: this.refreshToken }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Spotify token refresh failed:', errorData);
+        console.error('Server-side token refresh failed:', errorData);
         this.clearTokens(); // Clear tokens if refresh fails
         throw new Error(`Token refresh failed: ${response.status} ${response.statusText}`);
       }
@@ -182,9 +172,9 @@ export class SpotifyAPI {
       const tokenData: SpotifyTokenResponse = await response.json();
       // Spotify might not return a new refresh token, so keep the old one if not provided
       this.setAccessToken(tokenData.access_token, tokenData.refresh_token || this.refreshToken, tokenData.expires_in);
-      console.log('Access token refreshed successfully.');
+      console.log('Access token refreshed successfully via API route.');
     } catch (error) {
-      console.error('Error refreshing access token:', error);
+      console.error('Error refreshing access token via API route:', error);
       this.clearTokens();
       throw error;
     }
