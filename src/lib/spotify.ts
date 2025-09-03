@@ -144,7 +144,12 @@ export class SpotifyAPI {
       const errorBody = await response.text(); // Get the raw error body
       console.error(`Spotify API request failed: ${endpoint}`);
       console.error(`Status: ${response.status}, Status Text: ${response.statusText}`);
-      console.error(`Response Body: ${errorBody}`);
+      try {
+        const parsedError = JSON.parse(errorBody);
+        console.error(`Response Body (parsed):`, parsedError);
+      } catch (e) {
+        console.error(`Response Body (raw):`, errorBody);
+      }
 
       if (response.status === 401) {
         this.clearTokens();
