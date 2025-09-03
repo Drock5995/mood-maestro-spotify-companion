@@ -20,8 +20,8 @@ export default function Home() {
     
     const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
     const redirectUri = `${window.location.origin}/api/callback`;
-    // Added 'user-read-playback-state' and 'user-library-read' scopes for audio features
-    const scopes = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative user-read-playback-state user-library-read';
+    // Added 'user-read-playback-state', 'user-library-read', 'user-top-read', and 'user-read-recently-played' scopes for audio features
+    const scopes = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative user-read-playback-state user-library-read user-top-read user-read-recently-played';
     
     const authUrl = `https://accounts.spotify.com/authorize?` +
       `response_type=code&` +
