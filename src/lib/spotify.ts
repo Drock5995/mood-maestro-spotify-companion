@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer'; // Explicitly import Buffer
 export interface SpotifyUser {
   id: string;
   display_name: string;
@@ -239,38 +238,6 @@ export class SpotifyAPI {
       trackDetails: tracks,
       audioFeatures
     };
-  }
-
-  static async exchangeCodeForToken(code: string, redirectUri: string): Promise<SpotifyTokenResponse> {
-    const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-    
-    if (!clientId || !clientSecret) {
-      throw new Error('Spotify client credentials not configured');
-    }
-
-    const response = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: redirectUri,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Spotify token exchange error details:', errorData); // Log error details
-      throw new Error(`Token exchange failed: ${response.status} ${response.statusText}`);
-    }
-
-    const tokenData: SpotifyTokenResponse = await response.json();
-    console.log('Spotify token exchange successful. Received token data:', tokenData); // Log full token data
-    return tokenData;
   }
 }
 

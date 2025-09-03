@@ -1,5 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SpotifyAPI } from '@/lib/spotify';
+import { SpotifyAPI, SpotifyTokenResponse } from '@/lib/spotify';
+import { Buffer } from 'buffer'; // Moved Buffer import here
+
+// Helper function for token exchange, now local to this server-side route
+async function exchangeCodeForToken(code: string, redirectUri: string): Promise<SpotifyTokenResponse> {
+  const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  
+  if (!clientId || !clientSecret) {
+    throw new Error('Spotify client credentials not configured');
+  }
+
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+    },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error('Spotify token exchange error details:', errorData);
+    throw new Error(`Token exchange failed: ${response.status} ${response.statusText}`);
+  }
+
+  const tokenData: SpotifyTokenResponse = await response.json();
+  console.log('Spotify token exchange successful. Received token data:', tokenData);
+  return tokenData;
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -9,24 +43,25 @@ export async function GET(request: NextRequest) {
 
   // Handle authorization denial
   if (error) {
-    console.error('Spotify authorization denied:', error); // Added error logging
+    console.error('Spotify authorization denied:', error);
     return NextResponse.redirect(new URL('/?error=access_denied', request.url));
   }
 
   // Validate state parameter
   if (state !== 'spotify_auth') {
-    console.error('Invalid state parameter received:', state); // Added error logging
+    console.error('Invalid state parameter received:', state);
     return NextResponse.redirect(new URL('/?error=invalid_state', request.url));
   }
 
   if (!code) {
-    console.error('No authorization code received.'); // Added error logging
+    console.error('No authorization code received.');
     return NextResponse.redirect(new URL('/?error=no_code', request.url));
   }
 
   try {
     const redirectUri = `${new URL(request.url).origin}/api/callback`;
-    const tokenData = await SpotifyAPI.exchangeCodeForToken(code, redirectUri);
+    // Use the local exchangeCodeForToken function
+    const tokenData = await exchangeCodeForToken(code, redirectUri);
     
     // Explicitly log the granted scopes here
     console.log('Spotify token exchange successful. Granted scopes:', tokenData.scope);
