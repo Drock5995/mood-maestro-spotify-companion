@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, PlaylistWithTracks, MoodAnalysis } from '@/lib/spotify';
 import { analyzePlaylistMood } from '@/lib/mood-analysis';
 import { PlaylistMoodModal } from '@/components/PlaylistMoodModal';
+import { supabase } from '@/integrations/supabase/client';
 
 const spotify = new SpotifyAPI();
 
@@ -15,7 +16,7 @@ function DashboardContent() {
   const [error, setError] = useState<string | null>(null);
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistWithTracks | null>(null);
   const [moodAnalysis, setMoodAnalysis] = useState<MoodAnalysis | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzingPlaylistId, setAnalyzingPlaylistId] = useState<string | null>(null);
   const [showMoodModal, setShowMoodModal] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,35 +24,27 @@ function DashboardContent() {
   useEffect(() => {
     const initializeUser = async () => {
       try {
-        // Handle tokens from OAuth callback
         const accessToken = searchParams.get('access_token');
-        const refreshToken = searchParams.get('refresh_token');
-        const expiresIn = searchParams.get('expires_in');
-
         if (accessToken) {
           spotify.setAccessToken(accessToken);
-          if (refreshToken) {
-            localStorage.setItem('spotify_refresh_token', refreshToken);
-          }
+          const refreshToken = searchParams.get('refresh_token');
+          const expiresIn = searchParams.get('expires_in');
+          if (refreshToken) localStorage.setItem('spotify_refresh_token', refreshToken);
           if (expiresIn) {
-            const expiresAt = Date.now() + (parseInt(expiresIn) * 1000);
+            const expiresAt = Date.now() + parseInt(expiresIn) * 1000;
             localStorage.setItem('spotify_token_expires_at', expiresAt.toString());
           }
-          // Clean URL
           window.history.replaceState({}, '', '/dashboard');
         }
 
-        // Check if user has valid token
-        const storedToken = localStorage.getItem('spotify_access_token');
-        if (!storedToken && !accessToken) {
+        if (!localStorage.getItem('spotify_access_token')) {
           router.push('/');
           return;
         }
 
-        // Fetch user data and playlists
         const [userData, playlistData] = await Promise.all([
           spotify.getCurrentUser(),
-          spotify.getUserPlaylists()
+          spotify.getUserPlaylists(),
         ]);
 
         setUser(userData);
@@ -75,24 +68,46 @@ function DashboardContent() {
   };
 
   const handleAnalyzePlaylist = async (playlist: SpotifyPlaylist) => {
-    setIsAnalyzing(true);
+    setAnalyzingPlaylistId(playlist.id);
     setError(null);
-    
+
     try {
-      // Fetch detailed playlist data with tracks and audio features
       const playlistWithDetails = await spotify.getPlaylistWithDetails(playlist.id);
-      
-      // Analyze mood based on audio features
-      const analysis = analyzePlaylistMood(playlistWithDetails.audioFeatures || []);
-      
+      const initialAnalysis = analyzePlaylistMood(playlistWithDetails.audioFeatures || []);
+
       setSelectedPlaylist(playlistWithDetails);
-      setMoodAnalysis(analysis);
+      setMoodAnalysis({
+        ...initialAnalysis,
+        description: "Our AI is crafting a special description for this vibe...",
+      });
       setShowMoodModal(true);
-    } catch (error) {
-      console.error('Error analyzing playlist:', error);
-      setError('Failed to analyze playlist mood. Please try again.');
+
+      // Asynchronously call the AI for a better description
+      const { data, error: functionError } = await supabase.functions.invoke('openai-mood-description', {
+        body: {
+          moodData: initialAnalysis.audio_characteristics,
+          primaryMood: initialAnalysis.overall_mood,
+          playlistName: playlist.name,
+        },
+      });
+
+      if (functionError) throw functionError;
+
+      if (data.description) {
+        setMoodAnalysis(prev => prev ? { ...prev, description: data.description } : null);
+      }
+    } catch (err) {
+      console.error('Error during mood analysis:', err);
+      // Fallback to the original, non-AI analysis if anything fails
+      if (selectedPlaylist) {
+        const fallbackAnalysis = analyzePlaylistMood(selectedPlaylist.audioFeatures || []);
+        setMoodAnalysis(fallbackAnalysis);
+      } else {
+        setError('Failed to analyze playlist mood. Please try again.');
+        setShowMoodModal(false);
+      }
     } finally {
-      setIsAnalyzing(false);
+      setAnalyzingPlaylistId(null);
     }
   };
 
@@ -119,12 +134,6 @@ function DashboardContent() {
         <div className="text-center space-y-4">
           <h2 className="text-2xl font-bold text-white">Oops! Something went wrong</h2>
           <p className="text-red-200">{error}</p>
-          <button
-            onClick={() => router.push('/')}
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full transition-colors"
-          >
-            Try Again
-          </button>
         </div>
       </div>
     );
@@ -133,19 +142,6 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-900 via-black to-green-800">
       <div className="container mx-auto px-4 py-8">
-        {/* Error Display */}
-        {error && (
-          <div className="mb-6 bg-red-900/50 border border-red-700 rounded-lg p-4">
-            <p className="text-red-200">{error}</p>
-            <button
-              onClick={() => setError(null)}
-              className="mt-2 text-red-400 hover:text-red-300 text-sm underline"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
-        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
             {user?.images?.[0] && (
@@ -172,7 +168,6 @@ function DashboardContent() {
           </button>
         </div>
 
-        {/* Playlists Grid */}
         {playlists.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {playlists.map((playlist) => (
@@ -205,13 +200,12 @@ function DashboardContent() {
                   {playlist.tracks.total} track{playlist.tracks.total !== 1 ? 's' : ''}
                 </p>
                 
-                {/* Mood Analysis Button */}
                 <button
                   onClick={() => handleAnalyzePlaylist(playlist)}
-                  disabled={isAnalyzing}
+                  disabled={!!analyzingPlaylistId}
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 text-white px-4 py-2 rounded-full transition-all duration-200 text-sm font-medium flex items-center justify-center space-x-2"
                 >
-                  {isAnalyzing ? (
+                  {analyzingPlaylistId === playlist.id ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       <span>Analyzing...</span>
@@ -228,9 +222,6 @@ function DashboardContent() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <svg className="w-16 h-16 text-gray-500 mx-auto mb-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-            </svg>
             <h3 className="text-xl font-semibold text-white mb-2">No playlists found</h3>
             <p className="text-gray-300">
               Create some playlists in Spotify and they&apos;ll appear here!
@@ -239,7 +230,6 @@ function DashboardContent() {
         )}
       </div>
 
-      {/* Mood Analysis Modal */}
       {selectedPlaylist && moodAnalysis && (
         <PlaylistMoodModal
           playlist={selectedPlaylist}
