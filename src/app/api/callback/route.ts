@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SpotifyAPI, SpotifyTokenResponse } from '@/lib/spotify';
-import { Buffer } from 'buffer'; // Moved Buffer import here
+// Removed: import { Buffer } from 'buffer'; // This line is removed
 
 // Helper function for token exchange, now local to this server-side route
 async function exchangeCodeForToken(code: string, redirectUri: string): Promise<SpotifyTokenResponse> {
