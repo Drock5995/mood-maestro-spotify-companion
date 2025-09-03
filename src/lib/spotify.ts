@@ -130,6 +130,7 @@ export class SpotifyAPI {
       throw new Error('No access token available');
     }
 
+    console.log(`Making request to ${endpoint} with token: ${this.accessToken.substring(0, 10)}...`); // Log token
     const response = await fetch(`${SPOTIFY_BASE_URL}${endpoint}`, {
       ...options,
       headers: {
@@ -145,7 +146,6 @@ export class SpotifyAPI {
         this.clearTokens();
         throw new Error('Token expired');
       }
-      // Corrected: Removed the duplicate 'new' keyword
       throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
     }
 
@@ -250,10 +250,14 @@ export class SpotifyAPI {
     });
 
     if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Spotify token exchange error details:', errorData); // Log error details
       throw new Error(`Token exchange failed: ${response.status} ${response.statusText}`);
     }
 
-    return response.json();
+    const tokenData: SpotifyTokenResponse = await response.json();
+    console.log('Spotify token exchange successful. Received token data:', tokenData); // Log full token data
+    return tokenData;
   }
 }
 
