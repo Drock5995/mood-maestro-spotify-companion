@@ -145,7 +145,8 @@ export class SpotifyAPI {
         this.clearTokens();
         throw new Error('Token expired');
       }
-      throw new new Error(`Spotify API error: ${response.status} ${response.statusText}`);
+      // Corrected: Removed the duplicate 'new' keyword
+      throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
     }
 
     return response.json();
