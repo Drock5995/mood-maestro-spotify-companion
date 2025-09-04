@@ -126,29 +126,41 @@ function DashboardContent() {
     setError(null);
   
     try {
-      // 1. Use the local function to get parameters from the prompt
+      // 1. Get parameters from the prompt
       const { playlistName, recommendationOptions } = getPlaylistParametersFromPrompt(prompt);
       setGeneratedPlaylistName(playlistName);
   
-      // 2. Get user's liked songs to use as seeds
-      const likedSongs = await spotify.getLikedSongs();
-      
-      // 3. Select a few liked songs and artists as seeds
-      const likedSongsForSeeding = likedSongs.length > 0 ? shuffleArray(likedSongs).slice(0, 2) : [];
-      const seed_tracks = likedSongsForSeeding.map(t => t.id);
-      const seed_artists = likedSongsForSeeding.flatMap(t => t.artists.map(a => a.id)).slice(0, 1);
-  
-      // 4. Combine AI params with user-based seeds to get recommendations
-      const finalOptions: RecommendationOptions = { ...recommendationOptions, seed_tracks, seed_artists, limit: 30 };
-      if (!finalOptions.seed_tracks?.length) delete finalOptions.seed_tracks;
-      if (!finalOptions.seed_artists?.length) delete finalOptions.seed_artists;
-      if (!finalOptions.seed_genres?.length) delete finalOptions.seed_genres;
-  
+      const finalOptions: RecommendationOptions = { ...recommendationOptions, limit: 40 };
+
+      // 2. If the prompt didn't provide seed genres, let's get some from the user's library
+      if (!finalOptions.seed_genres?.length) {
+        const likedSongs = await spotify.getLikedSongs();
+        if (likedSongs.length > 0) {
+          const likedSongsForSeeding = shuffleArray(likedSongs).slice(0, 2);
+          finalOptions.seed_tracks = likedSongsForSeeding.map(t => t.id);
+          finalOptions.seed_artists = likedSongsForSeeding.flatMap(t => t.artists.map(a => a.id)).slice(0, 1);
+        }
+      }
+
+      // 3. Ensure we have at least one seed as a fallback
+      const hasSeeds = finalOptions.seed_artists?.length || finalOptions.seed_genres?.length || finalOptions.seed_tracks?.length;
+      if (!hasSeeds) {
+        console.log("No seeds found, using fallback genres.");
+        finalOptions.seed_genres = ['pop', 'indie']; // A safe fallback
+      }
+
+      // 4. Get recommendations
       const { tracks: recommendedTracks } = await spotify.getRecommendations(finalOptions);
   
-      // 5. Combine a few liked songs with new recommendations and shuffle
-      const finalPlaylist = shuffleArray([...likedSongsForSeeding.slice(0, 5), ...recommendedTracks]);
-      setGeneratedPlaylist(finalPlaylist);
+      // 5. Sprinkle in a few liked songs (if any) and shuffle
+      const likedSongs = await spotify.getLikedSongs();
+      const likedSongsToAdd = likedSongs.length > 0 ? shuffleArray(likedSongs).slice(0, 10) : [];
+      
+      const finalPlaylist = shuffleArray([...likedSongsToAdd, ...recommendedTracks]);
+      // Remove duplicates to ensure a clean list
+      const uniqueTracks = Array.from(new Map(finalPlaylist.map(track => [track.id, track])).values());
+
+      setGeneratedPlaylist(uniqueTracks.slice(0, 50)); // Limit final playlist size
   
     } catch (err) {
       console.error("Error generating playlist:", err);
