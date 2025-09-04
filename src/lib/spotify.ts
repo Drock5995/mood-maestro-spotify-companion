@@ -225,7 +225,7 @@ export class SpotifyAPI {
         } else {
           console.error(`[SpotifyAPI] Response Body (parsed full object):`, JSON.stringify(parsedError, null, 2));
         }
-      } catch (error: unknown) { // Changed 'e' to 'error: unknown'
+      } catch {
         console.error(`[SpotifyAPI] Response Body (raw):`, errorBody);
       }
 

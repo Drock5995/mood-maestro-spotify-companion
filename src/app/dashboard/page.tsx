@@ -24,7 +24,6 @@ function DashboardContent() {
   useEffect(() => {
     const initializeUser = async () => {
       const accessToken = searchParams.get('access_token');
-      const storedToken = localStorage.getItem('spotify_access_token');
 
       try {
         const refreshToken = searchParams.get('refresh_token');
@@ -76,13 +75,15 @@ function DashboardContent() {
       setSelectedPlaylist(playlistWithDetails);
       setMoodAnalysis(analysis);
       setShowMoodModal(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error during mood analysis:', err);
       let errorMessage = 'Failed to analyze playlist mood. Please try again.';
-      if (err.message && err.message.includes('403')) {
-        errorMessage = 'Spotify denied permission. Please log out and log back in to grant the necessary permissions for mood analysis.';
-      } else if (err.message) {
-        errorMessage = `An error occurred: ${err.message}`;
+      if (err instanceof Error) {
+        if (err.message && err.message.includes('403')) {
+          errorMessage = 'Spotify denied permission. Please log out and log back in to grant the necessary permissions for mood analysis.';
+        } else if (err.message) {
+          errorMessage = `An error occurred: ${err.message}`;
+        }
       }
       setError(errorMessage);
       setShowMoodModal(false);
