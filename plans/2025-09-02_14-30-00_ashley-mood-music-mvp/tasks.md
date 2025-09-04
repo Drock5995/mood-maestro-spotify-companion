@@ -7,5 +7,5 @@
 - [x] [P:auth-1] Implement Spotify OAuth authorization flow with callback handler and token storage
 - [x] [P:ui-1] Create dashboard page that fetches and displays user's playlists in a clean grid
 - [x] [P:polish-1] Add loading states, error handling, logout functionality, and Ashley-specific UI touches
-- [ ] [P:setup-2] Deploy skeleton app to Netlify and configure HTTPS redirect URI in Spotify dashboard
-- [ ] [P:test-1] Test complete auth flow end-to-end and verify redirect URI works on production
+- [x] [P:setup-2] Deploy skeleton app to Netlify and configure HTTPS redirect URI in Spotify dashboard
+- [x] [P:test-1] Test complete auth flow end-to-end and verify redirect URI works on production
