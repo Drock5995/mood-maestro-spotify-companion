@@ -20,15 +20,17 @@ export default function Home() {
     
     const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
     const redirectUri = `${window.location.origin}/api/callback`;
-    // Using a more comprehensive set of read-only scopes to ensure all permissions are granted.
+    // Added 'playlist-modify-public' to allow creating playlists for the user.
     const scopes = [
       'user-read-private',
       'user-read-email',
       'playlist-read-private',
       'playlist-read-collaborative',
-      'user-library-read',
+      'user-library-read', // Required for accessing liked songs
       'user-top-read',
       'user-read-recently-played',
+      'playlist-modify-public', // Required for creating public playlists
+      'playlist-modify-private', // Good to have for creating private playlists
     ].join(' ');
     
     const authUrl = `https://accounts.spotify.com/authorize?` +

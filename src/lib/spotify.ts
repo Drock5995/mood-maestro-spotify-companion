@@ -16,7 +16,7 @@ export interface SpotifyPlaylist {
   name: string;
   description: string | null;
   images: Array<{
-    url: string;
+    url:string;
     height: number;
     width: number;
   }>;
@@ -44,6 +44,7 @@ export interface SpotifyTrack {
   };
   duration_ms: number;
   preview_url: string | null;
+  uri: string; // Added track URI for adding to playlists
 }
 
 export interface SpotifyAudioFeatures {
@@ -97,6 +98,17 @@ export interface SpotifyTokenResponse {
   scope: string;
   expires_in: number;
   refresh_token: string;
+}
+
+export interface RecommendationOptions {
+  seed_artists?: string[];
+  seed_genres?: string[];
+  seed_tracks?: string[];
+  limit?: number;
+  target_valence?: number;
+  target_energy?: number;
+  target_danceability?: number;
+  target_tempo?: number;
 }
 
 const SPOTIFY_BASE_URL = 'https://api.spotify.com/v1';
@@ -200,11 +212,6 @@ export class SpotifyAPI {
       throw new Error('No access token available after refresh attempt.');
     }
 
-    console.log(`[SpotifyAPI] Making request to ${endpoint}`);
-    console.log(`[SpotifyAPI] Using access token (first 10 chars): ${this.accessToken.substring(0, 10)}...`);
-    console.log(`[SpotifyAPI] Token expires at: ${this.tokenExpiresAt ? new Date(this.tokenExpiresAt).toLocaleString() : 'N/A'}`);
-    console.log(`[SpotifyAPI] Current time: ${new Date().toLocaleString()}`);
-
     const response = await fetch(`${SPOTIFY_BASE_URL}${endpoint}`, {
       ...options,
       headers: {
@@ -216,26 +223,12 @@ export class SpotifyAPI {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error(`[SpotifyAPI] Spotify API request failed: ${endpoint}`);
-      console.error(`[SpotifyAPI] Status: ${response.status}, Status Text: ${response.statusText}`);
-      try {
-        const parsedError = JSON.parse(errorBody);
-        if (parsedError.error && parsedError.error.message) {
-          console.error(`[SpotifyAPI] Response Body (parsed error message):`, parsedError.error.message);
-        } else {
-          console.error(`[SpotifyAPI] Response Body (parsed full object):`, JSON.stringify(parsedError, null, 2));
-        }
-      } catch {
-        console.error(`[SpotifyAPI] Response Body (raw):`, errorBody);
-      }
-
       if (response.status === 401 && retry) {
         console.warn('[SpotifyAPI] Received 401 Unauthorized. Attempting token refresh and retrying request...');
-        this.clearTokens(); // Clear potentially bad token
+        this.clearTokens();
         try {
           await this.refreshAccessToken();
-          // Retry the original request with the new token
-          return this.makeRequest<T>(endpoint, options, false); // Do not retry again to prevent infinite loop
+          return this.makeRequest<T>(endpoint, options, false);
         } catch (refreshError) {
           console.error('[SpotifyAPI] Failed to refresh token after 401, redirecting to login.', refreshError);
           if (typeof window !== 'undefined') {
@@ -257,59 +250,37 @@ export class SpotifyAPI {
   async getUserPlaylists(): Promise<SpotifyPlaylist[]> {
     const response = await this.makeRequest<{
       items: SpotifyPlaylist[];
-      next: string | null;
-      total: number;
     }>('/me/playlists?limit=50');
-    
     return response.items;
   }
 
   async getPlaylistTracks(playlistId: string): Promise<SpotifyTrack[]> {
     const tracks: SpotifyTrack[] = [];
     let url = `/playlists/${playlistId}/tracks?limit=50`;
-    
     while (url) {
       const response = await this.makeRequest<{
-        items: Array<{
-          track: SpotifyTrack;
-        }>;
+        items: Array<{ track: SpotifyTrack | null }>;
         next: string | null;
       }>(url);
-      
-      tracks.push(...response.items.map(item => item.track));
-      url = response.next ? response.next.replace('https://api.spotify.com/v1', '') : '';
+      tracks.push(...response.items.map(item => item.track).filter((t): t is SpotifyTrack => t !== null));
+      url = response.next ? response.next.replace(SPOTIFY_BASE_URL, '') : '';
     }
-    
     return tracks;
   }
 
   async getAudioFeatures(trackIds: string[]): Promise<SpotifyAudioFeatures[]> {
-    if (trackIds.length === 0) {
-      console.log('[SpotifyAPI] No track IDs provided for audio features request.');
-      return [];
-    }
-    
-    console.log(`[SpotifyAPI] Requesting audio features for ${trackIds.length} tracks. First 5 IDs:`, trackIds.slice(0, 5));
-
+    if (trackIds.length === 0) return [];
     const chunks = [];
     for (let i = 0; i < trackIds.length; i += 100) {
       chunks.push(trackIds.slice(i, i + 100));
     }
-    
     const allFeatures: SpotifyAudioFeatures[] = [];
-    
     for (const chunk of chunks) {
       const response = await this.makeRequest<{
         audio_features: (SpotifyAudioFeatures | null)[];
       }>(`/audio-features?ids=${chunk.join(',')}`);
-      
-      const validFeatures = response.audio_features.filter(
-        (features): features is SpotifyAudioFeatures => features !== null
-      );
-      
-      allFeatures.push(...validFeatures);
+      allFeatures.push(...response.audio_features.filter((f): f is SpotifyAudioFeatures => f !== null));
     }
-    
     return allFeatures;
   }
 
@@ -318,15 +289,55 @@ export class SpotifyAPI {
       this.makeRequest<SpotifyPlaylist>(`/playlists/${playlistId}`),
       this.getPlaylistTracks(playlistId)
     ]);
-    
-    const trackIds = tracks.map(track => track.id).filter(id => id); // Filter out any null/undefined IDs
+    const trackIds = tracks.map(track => track.id).filter(id => id);
     const audioFeatures = trackIds.length > 0 ? await this.getAudioFeatures(trackIds) : [];
-    
-    return {
-      ...playlist,
-      trackDetails: tracks,
-      audioFeatures
-    };
+    return { ...playlist, trackDetails: tracks, audioFeatures };
+  }
+
+  async getLikedSongs(): Promise<SpotifyTrack[]> {
+    const tracks: SpotifyTrack[] = [];
+    let url = `/me/tracks?limit=50`;
+    while (url) {
+      const response = await this.makeRequest<{
+        items: Array<{ track: SpotifyTrack | null }>;
+        next: string | null;
+      }>(url);
+      tracks.push(...response.items.map(item => item.track).filter((t): t is SpotifyTrack => t !== null));
+      url = response.next ? response.next.replace(SPOTIFY_BASE_URL, '') : '';
+    }
+    return tracks;
+  }
+
+  async getRecommendations(options: RecommendationOptions): Promise<{ tracks: SpotifyTrack[] }> {
+    const params = new URLSearchParams();
+    if (options.seed_artists) params.append('seed_artists', options.seed_artists.join(','));
+    if (options.seed_genres) params.append('seed_genres', options.seed_genres.join(','));
+    if (options.seed_tracks) params.append('seed_tracks', options.seed_tracks.join(','));
+    if (options.limit) params.append('limit', options.limit.toString());
+    if (options.target_valence) params.append('target_valence', options.target_valence.toString());
+    if (options.target_energy) params.append('target_energy', options.target_energy.toString());
+    if (options.target_danceability) params.append('target_danceability', options.target_danceability.toString());
+    if (options.target_tempo) params.append('target_tempo', options.target_tempo.toString());
+    return this.makeRequest<{ tracks: SpotifyTrack[] }>(`/recommendations?${params.toString()}`);
+  }
+
+  async createPlaylist(userId: string, name: string, description: string): Promise<SpotifyPlaylist> {
+    return this.makeRequest<SpotifyPlaylist>(`/users/${userId}/playlists`, {
+      method: 'POST',
+      body: JSON.stringify({ name, description, public: true }),
+    });
+  }
+
+  async addTracksToPlaylist(playlistId: string, trackUris: string[]): Promise<{ snapshot_id: string }> {
+    let lastResponse: { snapshot_id: string } = { snapshot_id: '' };
+    for (let i = 0; i < trackUris.length; i += 100) {
+      const chunk = trackUris.slice(i, i + 100);
+      lastResponse = await this.makeRequest<{ snapshot_id: string }>(`/playlists/${playlistId}/tracks`, {
+        method: 'POST',
+        body: JSON.stringify({ uris: chunk }),
+      });
+    }
+    return lastResponse;
   }
 }
 
