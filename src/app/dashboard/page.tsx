@@ -24,8 +24,13 @@ function DashboardContent() {
 
   useEffect(() => {
     const initializeUser = async () => {
+      console.log('Dashboard useEffect triggered.');
+      const accessToken = searchParams.get('access_token');
+      console.log('Access token from URL:', accessToken ? accessToken.substring(0, 10) + '...' : 'null');
+      const storedToken = localStorage.getItem('spotify_access_token');
+      console.log('Access token from localStorage:', storedToken ? storedToken.substring(0, 10) + '...' : 'null');
+
       try {
-        const accessToken = searchParams.get('access_token');
         const refreshToken = searchParams.get('refresh_token');
         const expiresIn = searchParams.get('expires_in');
 
@@ -38,6 +43,7 @@ function DashboardContent() {
         }
 
         if (!localStorage.getItem('spotify_access_token')) {
+          console.log('No token found in localStorage, redirecting to login.');
           router.push('/');
           return;
         }
