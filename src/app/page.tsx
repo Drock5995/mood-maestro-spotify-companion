@@ -20,15 +20,16 @@ export default function Home() {
     
     const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
     const redirectUri = `${window.location.origin}/api/callback`;
-    // Re-ordered and confirmed scopes, ensuring all necessary ones for audio features are present.
-    const scopes = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative user-library-read user-read-playback-state user-top-read user-read-recently-played user-read-currently-playing user-modify-playback-state user-read-playback-position';
+    // Simplified scopes to the bare essentials for debugging
+    const scopes = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative';
     
     const authUrl = `https://accounts.spotify.com/authorize?` +
       `response_type=code&` +
       `client_id=${clientId}&` +
       `scope=${encodeURIComponent(scopes)}&` +
       `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-      `state=spotify_auth`;
+      `state=spotify_auth&` +
+      `show_dialog=true`; // This forces the consent screen to appear every time
 
     window.location.href = authUrl;
   };
