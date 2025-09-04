@@ -3,21 +3,42 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, PlaylistWithTracks, MoodAnalysis } from '@/lib/spotify';
-import { analyzePlaylistMood } from '@/lib/mood-analysis';
+import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, PlaylistWithTracks, MoodAnalysis, SpotifyTrack, RecommendationOptions } from '@/lib/spotify';
+import { analyzePlaylistMood, getPlaylistParametersFromPrompt } from '@/lib/mood-analysis';
 import { PlaylistMoodModal } from '@/components/PlaylistMoodModal';
+import { MoodCreator } from '@/components/MoodCreator';
+import { GeneratedPlaylist } from '@/components/GeneratedPlaylist';
 
 const spotify = new SpotifyAPI();
+
+// Helper to shuffle an array
+function shuffleArray<T>(array: T[]): T[] {
+  let currentIndex = array.length, randomIndex;
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+  }
+  return array;
+}
 
 function DashboardContent() {
   const [user, setUser] = useState<SpotifyUser | null>(null);
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // State for Mood Analysis Modal
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistWithTracks | null>(null);
   const [moodAnalysis, setMoodAnalysis] = useState<MoodAnalysis | null>(null);
   const [analyzingPlaylistId, setAnalyzingPlaylistId] = useState<string | null>(null);
   const [showMoodModal, setShowMoodModal] = useState(false);
+
+  // State for AI Mood DJ
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedPlaylist, setGeneratedPlaylist] = useState<SpotifyTrack[] | null>(null);
+  const [generatedPlaylistName, setGeneratedPlaylistName] = useState('');
+
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -98,23 +119,51 @@ function DashboardContent() {
     setMoodAnalysis(null);
   };
 
+  const handleGeneratePlaylist = async (prompt: string) => {
+    setIsGenerating(true);
+    setGeneratedPlaylist(null);
+    setGeneratedPlaylistName('');
+    setError(null);
+  
+    try {
+      // 1. Use the local function to get parameters from the prompt
+      const { playlistName, recommendationOptions } = getPlaylistParametersFromPrompt(prompt);
+      setGeneratedPlaylistName(playlistName);
+  
+      // 2. Get user's liked songs to use as seeds
+      const likedSongs = await spotify.getLikedSongs();
+      
+      // 3. Select a few liked songs and artists as seeds
+      const likedSongsForSeeding = likedSongs.length > 0 ? shuffleArray(likedSongs).slice(0, 2) : [];
+      const seed_tracks = likedSongsForSeeding.map(t => t.id);
+      const seed_artists = likedSongsForSeeding.flatMap(t => t.artists.map(a => a.id)).slice(0, 1);
+  
+      // 4. Combine AI params with user-based seeds to get recommendations
+      const finalOptions: RecommendationOptions = { ...recommendationOptions, seed_tracks, seed_artists, limit: 30 };
+      if (!finalOptions.seed_tracks?.length) delete finalOptions.seed_tracks;
+      if (!finalOptions.seed_artists?.length) delete finalOptions.seed_artists;
+      if (!finalOptions.seed_genres?.length) delete finalOptions.seed_genres;
+  
+      const { tracks: recommendedTracks } = await spotify.getRecommendations(finalOptions);
+  
+      // 5. Combine a few liked songs with new recommendations and shuffle
+      const finalPlaylist = shuffleArray([...likedSongsForSeeding.slice(0, 5), ...recommendedTracks]);
+      setGeneratedPlaylist(finalPlaylist);
+  
+    } catch (err) {
+      console.error("Error generating playlist:", err);
+      setError("Failed to generate playlist. There might have been a Spotify issue. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-900 via-black to-green-800 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-white text-lg">Loading your music...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-900 via-black to-red-800 flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <h2 className="text-2xl font-bold text-white">Oops! Something went wrong</h2>
-          <p className="text-red-200">{error}</p>
         </div>
       </div>
     );
@@ -150,6 +199,25 @@ function DashboardContent() {
             Logout
           </button>
         </div>
+
+        <div className="mb-8">
+          {generatedPlaylist && user ? (
+            <GeneratedPlaylist 
+              playlistName={generatedPlaylistName}
+              tracks={generatedPlaylist}
+              userId={user.id}
+              onClear={() => setGeneratedPlaylist(null)}
+            />
+          ) : (
+            <MoodCreator onGenerate={handleGeneratePlaylist} isLoading={isGenerating} />
+          )}
+        </div>
+
+        {error && (
+          <div className="bg-red-900/50 border border-red-500/50 text-red-200 p-4 rounded-lg mb-8 text-center">
+            <p>{error}</p>
+          </div>
+        )}
 
         {playlists.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

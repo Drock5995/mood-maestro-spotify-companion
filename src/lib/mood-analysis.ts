@@ -1,4 +1,4 @@
-import { SpotifyAudioFeatures, MoodAnalysis } from './spotify';
+import { SpotifyAudioFeatures, MoodAnalysis, RecommendationOptions } from './spotify';
 
 export type { MoodAnalysis };
 
@@ -75,6 +75,70 @@ export const MOOD_CATEGORIES: Record<string, MoodCategory> = {
     }
   }
 };
+
+/**
+ * Translates a user's text prompt into Spotify recommendation parameters without external AI.
+ */
+export function getPlaylistParametersFromPrompt(prompt: string): { playlistName: string; recommendationOptions: RecommendationOptions } {
+  const lowerCasePrompt = prompt.toLowerCase();
+  let playlistName = `Mood: ${prompt}`;
+  const recommendationOptions: RecommendationOptions = {};
+  const seed_genres: string[] = [];
+
+  // Keyword matching for moods and themes
+  if (lowerCasePrompt.includes('happy') || lowerCasePrompt.includes('joyful') || lowerCasePrompt.includes('upbeat')) {
+    playlistName = 'Happy Vibes';
+    recommendationOptions.target_valence = 0.8;
+    recommendationOptions.target_energy = 0.7;
+    seed_genres.push('happy', 'pop');
+  }
+  if (lowerCasePrompt.includes('sad') || lowerCasePrompt.includes('melancholic') || lowerCasePrompt.includes('rainy day') || lowerCasePrompt.includes('somber')) {
+    playlistName = 'Melancholic Mood';
+    recommendationOptions.target_valence = 0.2;
+    recommendationOptions.target_energy = 0.3;
+    seed_genres.push('sad', 'acoustic');
+  }
+  if (lowerCasePrompt.includes('energetic') || lowerCasePrompt.includes('workout') || lowerCasePrompt.includes('party') || lowerCasePrompt.includes('hype')) {
+    playlistName = 'Energy Boost';
+    recommendationOptions.target_energy = 0.9;
+    recommendationOptions.target_danceability = 0.8;
+    seed_genres.push('dance', 'electronic');
+  }
+  if (lowerCasePrompt.includes('calm') || lowerCasePrompt.includes('relax') || lowerCasePrompt.includes('study') || lowerCasePrompt.includes('focus')) {
+    playlistName = 'Calm & Focused';
+    recommendationOptions.target_energy = 0.2;
+    recommendationOptions.target_danceability = 0.3;
+    seed_genres.push('ambient', 'chill');
+  }
+  if (lowerCasePrompt.includes('80s') || lowerCasePrompt.includes('eighties')) {
+    playlistName = '80s Throwback';
+    seed_genres.push('80s', 'pop', 'new-wave');
+  }
+  if (lowerCasePrompt.includes('coffee shop') || lowerCasePrompt.includes('acoustic')) {
+    playlistName = 'Coffee Shop Vibe';
+    recommendationOptions.target_energy = 0.4;
+    recommendationOptions.target_valence = 0.6;
+    seed_genres.push('acoustic', 'indie-pop');
+  }
+  if (lowerCasePrompt.includes('intense') || lowerCasePrompt.includes('angry') || lowerCasePrompt.includes('training montage')) {
+    playlistName = 'Intense Motivation';
+    recommendationOptions.target_energy = 0.9;
+    recommendationOptions.target_valence = 0.4;
+    seed_genres.push('rock', 'metal', 'industrial');
+  }
+
+  if (seed_genres.length > 0) {
+    recommendationOptions.seed_genres = [...new Set(seed_genres)].slice(0, 2); // Max 2 unique genres
+  }
+
+  // Fallback name if no keywords matched
+  if (playlistName === `Mood: ${prompt}`) {
+    playlistName = prompt.length < 30 ? prompt : "Your Custom Mix";
+  }
+
+  return { playlistName, recommendationOptions };
+}
+
 
 /**
  * Analyzes playlist mood based on Spotify audio features
