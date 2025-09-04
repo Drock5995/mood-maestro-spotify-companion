@@ -2,11 +2,10 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image'; // Import Image component
+import Image from 'next/image';
 import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, PlaylistWithTracks, MoodAnalysis } from '@/lib/spotify';
 import { analyzePlaylistMood } from '@/lib/mood-analysis';
 import { PlaylistMoodModal } from '@/components/PlaylistMoodModal';
-// import { supabase } from '@/integrations/supabase/client'; // Removed unused import
 
 const spotify = new SpotifyAPI();
 
@@ -24,26 +23,19 @@ function DashboardContent() {
 
   useEffect(() => {
     const initializeUser = async () => {
-      console.log('Dashboard useEffect triggered.');
       const accessToken = searchParams.get('access_token');
-      console.log('Access token from URL:', accessToken ? accessToken.substring(0, 10) + '...' : 'null');
       const storedToken = localStorage.getItem('spotify_access_token');
-      console.log('Access token from localStorage:', storedToken ? storedToken.substring(0, 10) + '...' : 'null');
 
       try {
         const refreshToken = searchParams.get('refresh_token');
         const expiresIn = searchParams.get('expires_in');
 
         if (accessToken) {
-          console.log('Received access token:', accessToken.substring(0, 10) + '...'); // Log first 10 chars
-          console.log('Received expires_in:', expiresIn);
-          // Use the enhanced setAccessToken method
           spotify.setAccessToken(accessToken, refreshToken || undefined, expiresIn ? parseInt(expiresIn) : undefined);
           window.history.replaceState({}, '', '/dashboard');
         }
 
         if (!localStorage.getItem('spotify_access_token')) {
-          console.log('No token found in localStorage, redirecting to login.');
           router.push('/');
           return;
         }
@@ -84,9 +76,15 @@ function DashboardContent() {
       setSelectedPlaylist(playlistWithDetails);
       setMoodAnalysis(analysis);
       setShowMoodModal(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error during mood analysis:', err);
-      setError('Failed to analyze playlist mood. Please try again.');
+      let errorMessage = 'Failed to analyze playlist mood. Please try again.';
+      if (err.message && err.message.includes('403')) {
+        errorMessage = 'Spotify denied permission. Please log out and log back in to grant the necessary permissions for mood analysis.';
+      } else if (err.message) {
+        errorMessage = `An error occurred: ${err.message}`;
+      }
+      setError(errorMessage);
       setShowMoodModal(false);
     } finally {
       setAnalyzingPlaylistId(null);

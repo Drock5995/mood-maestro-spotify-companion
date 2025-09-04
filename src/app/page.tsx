@@ -20,8 +20,16 @@ export default function Home() {
     
     const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
     const redirectUri = `${window.location.origin}/api/callback`;
-    // Simplified scopes to the bare essentials for debugging
-    const scopes = 'user-read-private user-read-email playlist-read-private playlist-read-collaborative';
+    // Using a more comprehensive set of read-only scopes to ensure all permissions are granted.
+    const scopes = [
+      'user-read-private',
+      'user-read-email',
+      'playlist-read-private',
+      'playlist-read-collaborative',
+      'user-library-read',
+      'user-top-read',
+      'user-read-recently-played',
+    ].join(' ');
     
     const authUrl = `https://accounts.spotify.com/authorize?` +
       `response_type=code&` +
