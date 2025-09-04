@@ -88,9 +88,9 @@ export function getPlaylistParametersFromPrompt(prompt: string): { playlistName:
   // Keyword matching for moods and themes
   if (lowerCasePrompt.includes('happy') || lowerCasePrompt.includes('joyful') || lowerCasePrompt.includes('upbeat')) {
     playlistName = 'Happy Vibes';
-    recommendationOptions.target_valence = 0.8;
-    recommendationOptions.target_energy = 0.7;
-    seed_genres.push('pop'); // Using a single, reliable genre to prevent API errors.
+    // REMOVED target_valence and target_energy to make the request less restrictive and prevent errors.
+    // The genres themselves will provide the upbeat feel.
+    seed_genres.push('pop', 'dance-pop');
   }
   if (lowerCasePrompt.includes('sad') || lowerCasePrompt.includes('melancholic') || lowerCasePrompt.includes('rainy day') || lowerCasePrompt.includes('somber')) {
     playlistName = 'Melancholic Mood';
