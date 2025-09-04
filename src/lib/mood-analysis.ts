@@ -90,7 +90,7 @@ export function getPlaylistParametersFromPrompt(prompt: string): { playlistName:
     playlistName = 'Happy Vibes';
     recommendationOptions.target_valence = 0.8;
     recommendationOptions.target_energy = 0.7;
-    seed_genres.push('happy', 'pop');
+    seed_genres.push('pop', 'dance');
   }
   if (lowerCasePrompt.includes('sad') || lowerCasePrompt.includes('melancholic') || lowerCasePrompt.includes('rainy day') || lowerCasePrompt.includes('somber')) {
     playlistName = 'Melancholic Mood';
