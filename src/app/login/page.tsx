@@ -56,7 +56,7 @@ export default function LoginPage() {
         <div className="flex justify-center items-center mb-6">
           <Music className="w-12 h-12 text-purple-400" />
           <h1 className="text-4xl sm:text-5xl font-extrabold ml-4 text-white tracking-tight">
-            Music Mood Maestro
+            VibeSphere
           </h1>
         </div>
         <p className="text-lg sm:text-xl mb-8 text-gray-300 leading-relaxed">
