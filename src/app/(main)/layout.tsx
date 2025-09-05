@@ -150,11 +150,11 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
               </motion.div>
             </>
           )}
-        </AnimatePresence>
+        </AnPresence>
 
         <div className="flex-1 flex flex-col overflow-hidden">
           <MobileHeader onMenuClick={() => setIsSidebarOpen(true)} />
-          <main className="flex-1 flex flex-col relative overflow-y-auto bg-black/30 backdrop-blur-lg lg:rounded-2xl lg:border lg:border-white/10 p-4 sm:p-6">
+          <main className={`flex-1 flex flex-col relative bg-black/30 backdrop-blur-lg lg:rounded-2xl lg:border lg:border-white/10 p-4 sm:p-6 ${isSidebarOpen ? 'overflow-y-hidden lg:overflow-y-auto' : 'overflow-y-auto'}`}>
             {children}
           </main>
         </div>
