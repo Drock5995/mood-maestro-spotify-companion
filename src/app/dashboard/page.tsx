@@ -5,6 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
 
+// Helper function to format milliseconds to MM:SS
+const formatDuration = (ms: number) => {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = ((ms % 60000) / 1000).toFixed(0);
+  return `${minutes}:${parseInt(seconds) < 10 ? '0' : ''}${seconds}`;
+};
+
 // Component to handle the actual dashboard content, wrapped in Suspense
 function DashboardContent() {
   const router = useRouter();
@@ -19,6 +26,7 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof SpotifyTrack | 'release_date'; direction: 'ascending' | 'descending' } | null>(null);
 
   useEffect(() => {
     const accessToken = searchParams.get('access_token');
@@ -77,6 +85,7 @@ function DashboardContent() {
     setPlaylistTracks([]);
     setPlaylistArtists([]);
     setError(null);
+    setSortConfig(null); // Reset sort on new playlist selection
 
     try {
       const tracks = await spotifyApi.getPlaylistTracks(playlist.id);
@@ -99,6 +108,41 @@ function DashboardContent() {
     if (spotifyApi) spotifyApi.clearTokens();
     localStorage.clear();
     router.push('/login');
+  };
+
+  const sortedTracks = useMemo(() => {
+    let sortableTracks = [...playlistTracks];
+    if (sortConfig !== null) {
+      sortableTracks.sort((a, b) => {
+        let aValue: number | string;
+        let bValue: number | string;
+
+        if (sortConfig.key === 'release_date') {
+          aValue = new Date(a.album.release_date).getTime();
+          bValue = new Date(b.album.release_date).getTime();
+        } else {
+          aValue = a[sortConfig.key as keyof SpotifyTrack];
+          bValue = b[sortConfig.key as keyof SpotifyTrack];
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableTracks;
+  }, [playlistTracks, sortConfig]);
+
+  const requestSort = (key: keyof SpotifyTrack | 'release_date') => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
   };
 
   const analysisData = useMemo(() => {
@@ -216,7 +260,7 @@ function DashboardContent() {
             ) : selectedPlaylist && analysisData ? (
               <div>
                 <h3 className="text-2xl sm:text-3xl font-semibold mb-6 text-green-400">Analysis for &quot;{selectedPlaylist.name}&quot;</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                   <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
                     <h4 className="text-green-300 font-bold mb-2">Key Stats</h4>
                     <p><strong>Avg. Popularity:</strong> {analysisData.averagePopularity.toFixed(0)}</p>
@@ -232,6 +276,41 @@ function DashboardContent() {
                     <h4 className="text-green-300 font-bold mb-2">Top Genres</h4>
                     <ul className="list-decimal list-inside">{analysisData.topGenres.map(genre => <li key={genre}>{genre}</li>)}</ul>
                   </div>
+                </div>
+
+                <h4 className="text-xl sm:text-2xl font-semibold mt-6 mb-4 text-green-400">Tracks ({playlistTracks.length})</h4>
+                <div className="flex items-center space-x-2 sm:space-x-4 mb-4 text-sm sm:text-base">
+                  <span className="font-semibold text-gray-300">Sort by:</span>
+                  {['popularity', 'release_date', 'duration_ms'].map((key) => (
+                    <button
+                      key={key}
+                      onClick={() => requestSort(key as keyof SpotifyTrack | 'release_date')}
+                      className={`px-3 py-1 rounded-full transition-colors duration-200 ${sortConfig?.key === key ? 'bg-green-600 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}`}
+                    >
+                      {key.replace('_', ' ').replace('ms', '').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                      {sortConfig?.key === key && (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼')}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="max-h-96 overflow-y-auto pr-2">
+                  <ul className="space-y-2">
+                    {sortedTracks.map((track, index) => (
+                      <li key={track.id + index} className="flex items-center space-x-4 bg-gray-800 bg-opacity-50 p-3 rounded-lg border border-gray-700">
+                        <span className="text-gray-400 font-mono text-lg w-6 text-center">{index + 1}</span>
+                        {track.album?.images?.[0]?.url && <Image src={track.album.images[0].url} alt={track.album.name} width={48} height={48} className="rounded-md shadow-sm" />}
+                        <div className="flex-grow">
+                          <p className="text-white font-medium">{track.name}</p>
+                          <p className="text-gray-400 text-sm">{track.artists.map(artist => artist.name).join(', ')}</p>
+                        </div>
+                        <div className="flex items-center space-x-6 text-sm text-gray-300">
+                          <span className="w-20 hidden md:inline">Released: {track.album.release_date.substring(0, 4)}</span>
+                          <span className="w-16 hidden sm:inline">Pop: {track.popularity}</span>
+                          <span className="w-12 font-mono">{formatDuration(track.duration_ms)}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             ) : (
