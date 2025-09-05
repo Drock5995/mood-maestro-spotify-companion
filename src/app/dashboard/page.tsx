@@ -97,30 +97,41 @@ function DashboardContent() {
     router.push('/login');
   };
 
-  const moodSummary = useMemo(() => {
+  const analysisData = useMemo(() => {
     if (playlistTracks.length === 0) return null;
 
     const totalTracks = playlistTracks.length;
     const explicitTracks = playlistTracks.filter(track => track.explicit).length;
+    const explicitPercentage = (explicitTracks / totalTracks) * 100;
     const averagePopularity = playlistTracks.reduce((sum, track) => sum + track.popularity, 0) / totalTracks;
+    const uniqueArtists = new Set(playlistTracks.flatMap(track => track.artists.map(artist => artist.name))).size;
 
-    let moodDescription = `This playlist contains ${totalTracks} tracks. `;
+    let moodDescription = `This playlist contains ${totalTracks} tracks by ${uniqueArtists} unique artists. `;
 
     if (explicitTracks > 0) {
-      moodDescription += `About ${Math.round((explicitTracks / totalTracks) * 100)}% of the tracks contain explicit content, suggesting a more mature or edgy vibe. `;
+      moodDescription += `Approximately ${explicitPercentage.toFixed(0)}% of the tracks contain explicit content, suggesting a potentially mature or edgy vibe. `;
     } else {
       moodDescription += `It appears to be free of explicit content, indicating a generally clean listening experience. `;
     }
 
-    if (averagePopularity > 70) {
-      moodDescription += `With an average popularity score of ${averagePopularity.toFixed(0)}, it features many well-known and trending songs, likely making it energetic and widely appealing.`;
-    } else if (averagePopularity > 40) {
-      moodDescription += `With an average popularity score of ${averagePopularity.toFixed(0)}, it includes a good mix of popular and lesser-known tracks, offering a balanced listening experience.`;
+    if (averagePopularity > 75) {
+      moodDescription += `With a high average popularity score of ${averagePopularity.toFixed(0)}, this playlist is likely filled with well-known hits and trending songs, perfect for an energetic or widely appealing mood.`;
+    } else if (averagePopularity > 50) {
+      moodDescription += `With an average popularity score of ${averagePopularity.toFixed(0)}, it offers a balanced mix of popular and moderately known tracks, suitable for a diverse and engaging listening experience.`;
+    } else if (averagePopularity > 25) {
+      moodDescription += `With an average popularity score of ${averagePopularity.toFixed(0)}, this playlist leans towards more niche or discovery-oriented tracks, potentially offering a unique and reflective mood.`;
     } else {
-      moodDescription += `With an average popularity score of ${averagePopularity.toFixed(0)}, it leans towards more niche or discovery-oriented tracks, potentially offering a unique and reflective mood.`;
+      moodDescription += `With a lower average popularity score of ${averagePopularity.toFixed(0)}, this playlist seems to feature more obscure or deep-cut tracks, ideal for focused listening or exploring new sounds.`;
     }
 
-    return moodDescription;
+    return {
+      totalTracks,
+      explicitTracks,
+      explicitPercentage,
+      averagePopularity,
+      uniqueArtists,
+      moodDescription,
+    };
   }, [playlistTracks]);
 
   if (loading) {
@@ -221,11 +232,30 @@ function DashboardContent() {
                 <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-green-500"></div>
                 <p className="mt-4 text-lg">Analyzing {selectedPlaylist?.name || 'playlist'} vibe...</p>
               </div>
-            ) : selectedPlaylist && moodSummary ? (
+            ) : selectedPlaylist && analysisData ? (
               <div>
                 <h3 className="text-2xl font-semibold mb-4 text-green-400">Vibe for &quot;{selectedPlaylist.name}&quot;</h3>
-                <p className="text-lg text-gray-200 mb-6">{moodSummary}</p>
+                <p className="text-lg text-gray-200 mb-6">{analysisData.moodDescription}</p>
                 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-md">
+                    <p className="text-gray-300 text-sm">Total Tracks</p>
+                    <p className="text-white text-xl font-bold">{analysisData.totalTracks}</p>
+                  </div>
+                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-md">
+                    <p className="text-gray-300 text-sm">Unique Artists</p>
+                    <p className="text-white text-xl font-bold">{analysisData.uniqueArtists}</p>
+                  </div>
+                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-md">
+                    <p className="text-gray-300 text-sm">Explicit Content</p>
+                    <p className="text-white text-xl font-bold">{analysisData.explicitPercentage.toFixed(0)}%</p>
+                  </div>
+                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-md">
+                    <p className="text-gray-300 text-sm">Average Popularity</p>
+                    <p className="text-white text-xl font-bold">{analysisData.averagePopularity.toFixed(0)}</p>
+                  </div>
+                </div>
+
                 <h4 className="text-xl font-semibold mt-6 mb-3 text-green-400">Tracks in &quot;{selectedPlaylist.name}&quot; ({playlistTracks.length})</h4>
                 <div className="max-h-60 overflow-y-auto pr-2">
                   {playlistTracks.length > 0 ? (
