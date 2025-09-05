@@ -39,8 +39,12 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    if (!isShared || !playlist) {
+      setSharedPlaylistId(null);
+      return;
+    }
+
     const findSharedPlaylist = async () => {
-      if (!playlist) return;
       const { data } = await supabase
         .from('shared_playlists')
         .select('id')
@@ -157,11 +161,11 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
                   type="text"
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add a comment..."
+                  placeholder={!sharedPlaylistId ? "Loading comments..." : "Add a comment..."}
                   className="flex-1 bg-white/5 border border-white/10 rounded-full py-2 px-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !sharedPlaylistId}
                 />
-                <button type="submit" className="bg-purple-600 hover:bg-purple-700 rounded-full p-3 text-white transition-colors disabled:opacity-50" disabled={isSubmitting || !newComment.trim()}>
+                <button type="submit" className="bg-purple-600 hover:bg-purple-700 rounded-full p-3 text-white transition-colors disabled:opacity-50" disabled={isSubmitting || !newComment.trim() || !sharedPlaylistId}>
                   <Send size={20} />
                 </button>
               </form>
