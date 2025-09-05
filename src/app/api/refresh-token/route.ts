@@ -6,6 +6,7 @@ export async function POST(request: NextRequest) {
     const { refreshToken } = await request.json();
 
     if (!refreshToken) {
+      console.error('Refresh token is missing in request body.');
       return NextResponse.json({ error: 'Refresh token is missing' }, { status: 400 });
     }
 
@@ -13,6 +14,7 @@ export async function POST(request: NextRequest) {
     const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
+      console.error('Spotify client credentials (NEXT_PUBLIC_SPOTIFY_CLIENT_ID or SPOTIFY_CLIENT_SECRET) not configured for token refresh.');
       throw new Error('Spotify client credentials not configured for token refresh.');
     }
 
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Spotify token refresh failed:', errorData);
+      console.error('Spotify token refresh failed with status:', response.status, 'details:', errorData);
       return NextResponse.json(
         { error: `Token refresh failed: ${response.statusText}`, details: errorData },
         { status: response.status }
@@ -38,8 +40,9 @@ export async function POST(request: NextRequest) {
     }
 
     const tokenData = await response.json();
+    console.log('Spotify token refresh successful. New access token acquired.');
     return NextResponse.json(tokenData);
-  } catch (error: unknown) { // Changed 'any' to 'unknown'
+  } catch (error: unknown) {
     console.error('Error in refresh-token API route:', error instanceof Error ? error.message : String(error));
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal server error' }, { status: 500 });
   }
