@@ -1,6 +1,8 @@
 "use client";
 
 import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Home, Users, Heart, Music } from 'lucide-react';
 import { SpotifyUser, SpotifyPlaylist } from '@/lib/spotify';
 
@@ -11,17 +13,23 @@ interface SidebarProps {
   selectedPlaylistId?: string | null;
 }
 
-const NavLink = ({ icon: Icon, label }: { icon: React.ElementType, label: string }) => (
-  <a href="#" className="flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-colors duration-200">
-    <Icon className="w-5 h-5" />
-    <span className="font-medium">{label}</span>
-  </a>
-);
+const NavLink = ({ href, icon: Icon, label }: { href: string, icon: React.ElementType, label: string }) => {
+  const pathname = usePathname();
+  const isActive = pathname === href;
+
+  return (
+    <Link href={href} className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-200 ${
+      isActive ? 'bg-white/20 text-white' : 'text-gray-300 hover:bg-white/10 hover:text-white'
+    }`}>
+      <Icon className="w-5 h-5" />
+      <span className="font-medium">{label}</span>
+    </Link>
+  );
+};
 
 export default function Sidebar({ user, playlists, onPlaylistClick, selectedPlaylistId }: SidebarProps) {
   return (
     <aside className="w-64 bg-black/30 p-4 flex flex-col space-y-6 rounded-2xl">
-      {/* Profile Section */}
       {user && (
         <div className="flex items-center space-x-4 p-2">
           {user.images?.[0]?.url && (
@@ -34,23 +42,20 @@ export default function Sidebar({ user, playlists, onPlaylistClick, selectedPlay
             />
           )}
           <div>
-            <h3 className="font-bold text-white text-lg">{user.display_name}</h3>
-            <p className="text-gray-400 text-sm">{user.email}</p>
+            <h3 className="font-bold text-white text-lg truncate">{user.display_name}</h3>
+            <p className="text-gray-400 text-sm truncate">{user.email}</p>
           </div>
         </div>
       )}
 
-      {/* Navigation */}
       <nav className="flex flex-col space-y-2">
-        <NavLink icon={Home} label="Home" />
-        <NavLink icon={Users} label="Community" />
-        <NavLink icon={Heart} label="Friends" />
+        <NavLink href="/dashboard" icon={Home} label="Home" />
+        <NavLink href="/community" icon={Users} label="Community" />
+        <NavLink href="/friends" icon={Heart} label="Friends" />
       </nav>
 
-      {/* Divider */}
       <div className="border-t border-white/10"></div>
 
-      {/* Playlists */}
       <div className="flex-grow overflow-y-auto pr-2">
         <h4 className="text-gray-400 font-semibold text-sm uppercase tracking-wider px-3 mb-3">Your Playlists</h4>
         <ul className="space-y-1">

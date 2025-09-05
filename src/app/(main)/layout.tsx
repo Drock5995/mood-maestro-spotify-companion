@@ -2,13 +2,14 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AnimatePresence } from 'framer-motion';
 import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
 import Sidebar from '@/components/Sidebar';
-import PlaylistCard from '@/components/PlaylistCard';
-import PlaylistDetailView from '@/components/PlaylistDetailView';
 
-function DashboardContent() {
+// This component wraps our main pages (Dashboard, Community, etc.)
+// It handles the core Spotify authentication and data fetching logic
+// so that the pages themselves can focus on their specific content.
+
+function MainLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [spotifyApi, setSpotifyApi] = useState<SpotifyAPI | null>(null);
@@ -17,11 +18,8 @@ function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // State for detail view
+  // State for detail view, passed down through context or props if needed
   const [selectedPlaylist, setSelectedPlaylist] = useState<SpotifyPlaylist | null>(null);
-  const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
-  const [playlistArtists, setPlaylistArtists] = useState<SpotifyArtist[]>([]);
-  const [isDetailLoading, setIsDetailLoading] = useState(false);
 
   useEffect(() => {
     const accessToken = searchParams.get('access_token');
@@ -32,7 +30,7 @@ function DashboardContent() {
       localStorage.setItem('spotify_access_token', accessToken);
       localStorage.setItem('spotify_refresh_token', refreshToken);
       localStorage.setItem('spotify_token_expires_at', (Date.now() + parseInt(expiresIn) * 1000).toString());
-      router.replace('/dashboard', undefined);
+      router.replace('/dashboard', undefined); // Redirect to clean URL
       const api = new SpotifyAPI(accessToken);
       setSpotifyApi(api);
     } else {
@@ -42,6 +40,7 @@ function DashboardContent() {
         const api = new SpotifyAPI(storedAccessToken);
         setSpotifyApi(api);
       } else {
+        // No valid token, redirect to login
         router.push('/login');
       }
     }
@@ -50,6 +49,7 @@ function DashboardContent() {
   useEffect(() => {
     const fetchData = async () => {
       if (spotifyApi) {
+        setLoading(true);
         try {
           const [currentUser, userPlaylists] = await Promise.all([
             spotifyApi.getCurrentUser(),
@@ -71,37 +71,6 @@ function DashboardContent() {
     fetchData();
   }, [spotifyApi, router]);
 
-  const handlePlaylistSelect = async (playlist: SpotifyPlaylist) => {
-    if (!spotifyApi) return;
-    
-    setIsDetailLoading(true);
-    setSelectedPlaylist(playlist);
-
-    try {
-      const tracks = await spotifyApi.getPlaylistTracks(playlist.id);
-      setPlaylistTracks(tracks);
-
-      if (tracks.length > 0) {
-        const artistIds = [...new Set(tracks.flatMap(track => track.artists.map(artist => artist.id)))];
-        const artists = await spotifyApi.getSeveralArtists(artistIds);
-        setPlaylistArtists(artists);
-      } else {
-        setPlaylistArtists([]);
-      }
-    } catch (err) {
-      console.error('Failed to fetch playlist details:', err);
-      setError('Could not load playlist details.');
-    } finally {
-      setIsDetailLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    if (spotifyApi) spotifyApi.clearTokens();
-    localStorage.clear();
-    router.push('/login');
-  };
-
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center text-white">
@@ -111,7 +80,7 @@ function DashboardContent() {
     );
   }
 
-  if (error && !selectedPlaylist) {
+  if (error) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4 text-white">
         <h1 className="text-3xl font-bold mb-4 text-red-400">Error</h1>
@@ -124,55 +93,37 @@ function DashboardContent() {
   }
 
   return (
-    <div className="flex h-screen p-4 gap-4 relative overflow-hidden">
-      <Sidebar user={user} playlists={playlists} onPlaylistClick={handlePlaylistSelect} selectedPlaylistId={selectedPlaylist?.id} />
-      <main className="flex-1 flex flex-col">
-        <header className="flex justify-between items-center mb-6 px-2">
-          <h1 className="text-4xl font-extrabold text-white">
-            Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">Playlist Connect</span>
-          </h1>
-          <button onClick={handleLogout} className="bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-5 rounded-full transition duration-300 ease-in-out">
-            Logout
-          </button>
-        </header>
-        <div className="flex-1 overflow-y-auto pr-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {playlists.map((playlist, index) => (
-              <div key={playlist.id} onClick={() => handlePlaylistSelect(playlist)}>
-                <PlaylistCard playlist={playlist} index={index} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </main>
-      <AnimatePresence>
-        {selectedPlaylist && !isDetailLoading && (
-          <PlaylistDetailView
-            playlist={selectedPlaylist}
-            tracks={playlistTracks}
-            artists={playlistArtists}
-            onBack={() => setSelectedPlaylist(null)}
-          />
+    <div className="flex h-screen p-4 gap-4">
+      <Sidebar 
+        user={user} 
+        playlists={playlists} 
+        onPlaylistClick={(p) => {
+          // This logic will now be handled by the dashboard page itself
+          // For now, we can navigate or handle state here
+          router.push(`/dashboard?playlist=${p.id}`);
+        }}
+        selectedPlaylistId={selectedPlaylist?.id}
+      />
+      <main className="flex-1 flex flex-col relative overflow-hidden">
+        {/* Pass spotifyApi and user data to children pages */}
+        {children && (children as any).type && (
+          children
         )}
-      </AnimatePresence>
-      {isDetailLoading && (
-         <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-20">
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div>
-         </div>
-      )}
+      </main>
     </div>
   );
 }
 
-export default function DashboardPage() {
+
+export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={
       <div className="flex min-h-screen flex-col items-center justify-center text-white">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div>
-        <p className="mt-4 text-lg">Loading Dashboard...</p>
+        <p className="mt-4 text-lg">Loading App...</p>
       </div>
     }>
-      <DashboardContent />
+      <MainLayoutContent>{children}</MainLayoutContent>
     </Suspense>
   );
 }
