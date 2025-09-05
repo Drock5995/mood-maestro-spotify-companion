@@ -93,9 +93,9 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
       case 'overview': return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white/5 p-6 rounded-xl text-center"><h3 className="text-4xl font-bold">{tracks.length}</h3><p className="text-gray-400">Songs</p></div>
-            <div className="bg-white/5 p-6 rounded-xl text-center"><h3 className="text-4xl font-bold">{analysis?.totalDuration}</h3><p className="text-gray-400">Total Duration</p></div>
-            <div className="bg-white/5 p-6 rounded-xl text-center"><h3 className="text-4xl font-bold">{analysis?.avgPopularity}</h3><p className="text-gray-400">Avg. Popularity</p></div>
+            <div className="bg-white/5 p-6 rounded-xl text-center"><h3 className="text-3xl sm:text-4xl font-bold">{tracks.length}</h3><p className="text-gray-400">Songs</p></div>
+            <div className="bg-white/5 p-6 rounded-xl text-center"><h3 className="text-3xl sm:text-4xl font-bold">{analysis?.totalDuration}</h3><p className="text-gray-400">Total Duration</p></div>
+            <div className="bg-white/5 p-6 rounded-xl text-center"><h3 className="text-3xl sm:text-4xl font-bold">{analysis?.avgPopularity}</h3><p className="text-gray-400">Avg. Popularity</p></div>
           </div>
           <div className="bg-white/5 p-6 rounded-xl">
             <h3 className="text-2xl font-bold mb-4">Top Genres</h3>
@@ -117,8 +117,8 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
             <li key={track.id + index} className="flex items-center p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
               <span className="w-8 text-gray-400">{index + 1}</span>
               <Image src={track.album.images[0].url} alt={track.album.name} width={40} height={40} className="rounded mr-4" />
-              <div className="flex-grow"><p className="font-semibold">{track.name}</p><p className="text-sm text-gray-400">{track.artists.map(a => a.name).join(', ')}</p></div>
-              <span className="text-sm text-gray-400">{formatDuration(track.duration_ms)}</span>
+              <div className="flex-grow min-w-0"><p className="font-semibold truncate">{track.name}</p><p className="text-sm text-gray-400 truncate">{track.artists.map(a => a.name).join(', ')}</p></div>
+              <span className="text-sm text-gray-400 ml-2">{formatDuration(track.duration_ms)}</span>
             </li>
           ))}</ul>
         </motion.div>
@@ -163,7 +163,7 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
     <motion.div
       initial={{ opacity: 0, x: '100%' }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: '100%' }}
       transition={{ duration: 0.5, ease: 'easeInOut' }}
-      className="absolute inset-0 bg-gray-900 p-6 flex flex-col"
+      className="absolute inset-0 bg-gray-900 p-4 sm:p-6 flex flex-col"
     >
       <svg width="0" height="0" style={{ position: 'absolute' }}><defs>{gradients.map((grad, index) => (
         <linearGradient id={`color${index}`} x1="0" y1="0" x2="1" y2="0" key={index}><stop offset="0%" stopColor={grad[0]} /><stop offset="100%" stopColor={grad[1]} /></linearGradient>
@@ -171,12 +171,12 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
 
       <button onClick={onBack} className="flex items-center space-x-2 text-gray-300 hover:text-white mb-6 self-start"><ArrowLeft /><span>Back to Dashboard</span></button>
 
-      <header className="flex flex-col md:flex-row items-center text-center md:text-left gap-8 mb-8">
-        <Image src={playlist.images[0].url} alt={playlist.name} width={200} height={200} className="rounded-2xl shadow-2xl flex-shrink-0" />
+      <header className="flex flex-col md:flex-row items-center text-center md:text-left gap-4 md:gap-8 mb-8">
+        <Image src={playlist.images[0].url} alt={playlist.name} width={200} height={200} className="rounded-2xl shadow-2xl flex-shrink-0 w-32 h-32 sm:w-40 sm:h-40 md:w-52 md:h-52 object-cover" />
         <div>
           <p className="text-sm font-bold text-purple-400 uppercase tracking-widest">Playlist</p>
-          <h1 className="text-5xl md:text-7xl font-extrabold mt-2 mb-4">{playlist.name}</h1>
-          <p className="text-gray-400 max-w-prose">{playlist.description || 'A collection of amazing tracks.'}</p>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mt-2 mb-4">{playlist.name}</h1>
+          <p className="text-gray-400 max-w-prose text-sm sm:text-base">{playlist.description || 'A collection of amazing tracks.'}</p>
           <button onClick={onShareToggle} className={`mt-4 flex items-center space-x-2 px-4 py-2 rounded-full font-semibold transition-all duration-300 ${isShared ? 'bg-emerald-500 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`}>
             {isShared ? <CheckCircle size={20} /> : <Share2 size={20} />}
             <span>{isShared ? 'Shared to Community' : 'Share to Community'}</span>
@@ -184,9 +184,9 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
         </div>
       </header>
 
-      <nav className="flex items-center space-x-2 md:space-x-4 border-b border-white/10 mb-8">
+      <nav className="flex items-center space-x-1 sm:space-x-2 md:space-x-4 border-b border-white/10 mb-8 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto">
         {([['overview', Music], ['songs', Users], ['social', Share2]] as const).map(([tab, Icon]) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`relative flex items-center space-x-2 px-4 py-3 font-semibold transition-colors ${activeTab === tab ? 'text-white' : 'text-gray-400 hover:text-white'}`}>
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`relative flex-shrink-0 flex items-center space-x-2 px-3 sm:px-4 py-3 font-semibold transition-colors ${activeTab === tab ? 'text-white' : 'text-gray-400 hover:text-white'}`}>
             <Icon className="w-5 h-5" /><span>{tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
             {activeTab === tab && <motion.div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-t-full" layoutId="underline" />}
           </button>

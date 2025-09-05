@@ -110,12 +110,12 @@ export default function ProfilePage() {
           alt={profile.display_name || 'User Avatar'}
           width={128}
           height={128}
-          className="rounded-full border-4 border-purple-500 shadow-lg mb-4"
+          className="rounded-full border-4 border-purple-500 shadow-lg mb-4 w-24 h-24 md:w-32 md:h-32 object-cover"
         />
-        <h1 className="text-4xl font-extrabold text-white">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-white">
           {profile.display_name || 'A Spotify Listener'}
         </h1>
-        <p className="text-gray-400 mt-2 text-lg">
+        <p className="text-gray-400 mt-2 text-base md:text-lg">
           {playlists.length} {playlists.length === 1 ? 'Shared Playlist' : 'Shared Playlists'}
         </p>
       </header>
@@ -127,7 +127,7 @@ export default function ProfilePage() {
             <p className="text-gray-500 mt-2">This user hasn't shared any playlists with the community.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {playlists.map((p, index) => (
               <CommunityPlaylistCard key={p.id} playlist={p} index={index} />
             ))}

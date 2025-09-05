@@ -1,22 +1,30 @@
 "use client";
 
 import { useEffect, useState, Suspense, ReactNode } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { SpotifyAPI, SpotifyUser, SpotifyPlaylist } from '@/lib/spotify';
 import Sidebar from '@/components/Sidebar';
+import MobileHeader from '@/components/MobileHeader';
 import { SpotifyContext } from '@/context/SpotifyContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
+import { AnimatePresence, motion } from 'framer-motion';
 
 function MainLayoutContent({ children }: { children: ReactNode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const [spotifyApi, setSpotifyApi] = useState<SpotifyAPI | null>(null);
   const [user, setUser] = useState<SpotifyUser | null>(null);
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -107,14 +115,49 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
 
   return (
     <SpotifyContext.Provider value={contextValue}>
-      <div className="flex h-screen p-4 gap-4 bg-black/20">
-        <Sidebar 
-          onPlaylistClick={(p) => router.push(`/dashboard?playlist_id=${p.id}`)}
-          selectedPlaylistId={playlistId}
-        />
-        <main className="flex-1 flex flex-col relative overflow-hidden bg-black/30 backdrop-blur-lg rounded-2xl border border-white/10 p-6">
-          {children}
-        </main>
+      <div className="h-screen bg-black/20 lg:p-4 lg:flex lg:gap-4">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block w-72 flex-shrink-0">
+          <Sidebar 
+            onPlaylistClick={(p) => router.push(`/dashboard?playlist_id=${p.id}`)}
+            selectedPlaylistId={playlistId}
+          />
+        </div>
+
+        {/* Mobile Sidebar */}
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+                onClick={() => setIsSidebarOpen(false)}
+              />
+              <motion.div
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="fixed top-0 left-0 h-full w-72 z-50 lg:hidden"
+              >
+                <Sidebar 
+                  onPlaylistClick={(p) => router.push(`/dashboard?playlist_id=${p.id}`)}
+                  selectedPlaylistId={playlistId}
+                />
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <MobileHeader onMenuClick={() => setIsSidebarOpen(true)} />
+          <main className="flex-1 flex flex-col relative overflow-y-auto bg-black/30 backdrop-blur-lg lg:rounded-2xl lg:border lg:border-white/10 p-4 sm:p-6">
+            {children}
+          </main>
+        </div>
       </div>
     </SpotifyContext.Provider>
   );
