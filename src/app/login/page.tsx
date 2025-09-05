@@ -30,8 +30,15 @@ export default function LoginPage() {
     // Check for error query parameter after redirect
     const params = new URLSearchParams(window.location.search);
     const error = params.get('error');
+    const details = params.get('details'); // Get the detailed error message
+
     if (error) {
-      alert(`Login failed: ${error}. Please try again.`);
+      let errorMessage = `Login failed: ${error}.`;
+      if (details) {
+        errorMessage += ` Details: ${decodeURIComponent(details)}`;
+      }
+      errorMessage += ` Please try again.`;
+      alert(errorMessage);
       // Clear the error from the URL
       router.replace('/login', undefined);
     }
