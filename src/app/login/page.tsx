@@ -14,6 +14,7 @@ export default function LoginPage() {
       'user-read-email',
       'playlist-read-private',
       'playlist-read-collaborative',
+      'user-library-read', // Added this scope for audio features
     ].join(' ');
 
     if (!clientId) {
