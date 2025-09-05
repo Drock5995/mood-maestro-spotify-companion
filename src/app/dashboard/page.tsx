@@ -2,10 +2,11 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { SpotifyAPI, SpotifyUser, SpotifyPlaylist } from '@/lib/spotify';
+import { AnimatePresence } from 'framer-motion';
+import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
 import Sidebar from '@/components/Sidebar';
 import PlaylistCard from '@/components/PlaylistCard';
+import PlaylistDetailView from '@/components/PlaylistDetailView';
 
 function DashboardContent() {
   const router = useRouter();
@@ -15,6 +16,12 @@ function DashboardContent() {
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // State for detail view
+  const [selectedPlaylist, setSelectedPlaylist] = useState<SpotifyPlaylist | null>(null);
+  const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
+  const [playlistArtists, setPlaylistArtists] = useState<SpotifyArtist[]>([]);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
 
   useEffect(() => {
     const accessToken = searchParams.get('access_token');
@@ -64,6 +71,31 @@ function DashboardContent() {
     fetchData();
   }, [spotifyApi, router]);
 
+  const handlePlaylistSelect = async (playlist: SpotifyPlaylist) => {
+    if (!spotifyApi) return;
+    
+    setIsDetailLoading(true);
+    setSelectedPlaylist(playlist);
+
+    try {
+      const tracks = await spotifyApi.getPlaylistTracks(playlist.id);
+      setPlaylistTracks(tracks);
+
+      if (tracks.length > 0) {
+        const artistIds = [...new Set(tracks.flatMap(track => track.artists.map(artist => artist.id)))];
+        const artists = await spotifyApi.getSeveralArtists(artistIds);
+        setPlaylistArtists(artists);
+      } else {
+        setPlaylistArtists([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch playlist details:', err);
+      setError('Could not load playlist details.');
+    } finally {
+      setIsDetailLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     if (spotifyApi) spotifyApi.clearTokens();
     localStorage.clear();
@@ -79,7 +111,7 @@ function DashboardContent() {
     );
   }
 
-  if (error) {
+  if (error && !selectedPlaylist) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4 text-white">
         <h1 className="text-3xl font-bold mb-4 text-red-400">Error</h1>
@@ -92,8 +124,8 @@ function DashboardContent() {
   }
 
   return (
-    <div className="flex h-screen p-4 gap-4">
-      <Sidebar user={user} playlists={playlists} onPlaylistClick={() => {}} />
+    <div className="flex h-screen p-4 gap-4 relative overflow-hidden">
+      <Sidebar user={user} playlists={playlists} onPlaylistClick={handlePlaylistSelect} selectedPlaylistId={selectedPlaylist?.id} />
       <main className="flex-1 flex flex-col">
         <header className="flex justify-between items-center mb-6 px-2">
           <h1 className="text-4xl font-extrabold text-white">
@@ -106,11 +138,28 @@ function DashboardContent() {
         <div className="flex-1 overflow-y-auto pr-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {playlists.map((playlist, index) => (
-              <PlaylistCard key={playlist.id} playlist={playlist} index={index} />
+              <div key={playlist.id} onClick={() => handlePlaylistSelect(playlist)}>
+                <PlaylistCard playlist={playlist} index={index} />
+              </div>
             ))}
           </div>
         </div>
       </main>
+      <AnimatePresence>
+        {selectedPlaylist && !isDetailLoading && (
+          <PlaylistDetailView
+            playlist={selectedPlaylist}
+            tracks={playlistTracks}
+            artists={playlistArtists}
+            onBack={() => setSelectedPlaylist(null)}
+          />
+        )}
+      </AnimatePresence>
+      {isDetailLoading && (
+         <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-20">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div>
+         </div>
+      )}
     </div>
   );
 }
