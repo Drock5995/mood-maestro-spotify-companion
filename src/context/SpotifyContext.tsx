@@ -11,6 +11,7 @@ export interface SpotifyContextType {
   loading: boolean;
   error: string | null;
   session: Session | null;
+  onPlayTrack: (previewUrl: string | null) => void; // Added for audio playback
 }
 
 export const SpotifyContext = createContext<SpotifyContextType | undefined>(undefined);

@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { spotifyApi, playlists, loading, session } = useSpotify();
+  const { spotifyApi, playlists, loading, session, onPlayTrack } = useSpotify(); // Destructure onPlayTrack
 
   const [selectedPlaylist, setSelectedPlaylist] = useState<SpotifyPlaylist | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
@@ -111,6 +111,7 @@ function DashboardContent() {
 
   const handleBack = () => {
     setSelectedPlaylist(null);
+    onPlayTrack(null); // Stop playing when going back
     router.push('/dashboard', { scroll: false });
   };
 
@@ -158,6 +159,7 @@ function DashboardContent() {
               isShared={sharedPlaylistsMap.has(selectedPlaylist.id)}
               sharedPlaylistId={sharedPlaylistsMap.get(selectedPlaylist.id) || null}
               onShareToggle={() => handleShareToggle(selectedPlaylist)}
+              onPlayTrack={onPlayTrack} // Pass onPlayTrack here
             />
           )}
         </AnimatePresence>

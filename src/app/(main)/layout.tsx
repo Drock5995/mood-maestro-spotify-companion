@@ -9,6 +9,7 @@ import { SpotifyContext } from '@/context/SpotifyContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { AnimatePresence, motion } from 'framer-motion';
+import AudioPlayer from '@/components/AudioPlayer'; // Import the new AudioPlayer
 
 function MainLayoutContent({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -21,6 +22,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [currentPlayingTrackPreviewUrl, setCurrentPlayingTrackPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setIsSidebarOpen(false);
@@ -85,7 +87,11 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
     }
   }, [spotifyApi, session, router]);
 
-  const contextValue = { spotifyApi, user, playlists, loading, error, session };
+  const handlePlayTrack = (previewUrl: string | null) => {
+    setCurrentPlayingTrackPreviewUrl(previewUrl);
+  };
+
+  const contextValue = { spotifyApi, user, playlists, loading, error, session, onPlayTrack: handlePlayTrack };
   const playlistId = searchParams.get('playlist_id');
 
   if (loading && !user) {
@@ -116,7 +122,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   // This comment is added to force re-compilation and address a persistent build error.
   return (
     <SpotifyContext.Provider value={contextValue}>
-      <div className="h-screen bg-black/20 lg:p-4 lg:flex lg:gap-4">
+      <div className="h-screen bg-black/20 lg:p-4 lg:flex lg:gap-4 pb-16"> {/* Added pb-16 for player */}
         {/* Desktop Sidebar */}
         <div className="hidden lg:block w-72 flex-shrink-0">
           <Sidebar 
@@ -160,6 +166,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+      <AudioPlayer src={currentPlayingTrackPreviewUrl} onEnded={() => setCurrentPlayingTrackPreviewUrl(null)} />
     </SpotifyContext.Provider>
   );
 }

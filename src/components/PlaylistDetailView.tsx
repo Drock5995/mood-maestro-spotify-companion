@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { ArrowLeft, Music, Users, Share2, CheckCircle, Send } from 'lucide-react';
+import { ArrowLeft, Music, Users, Share2, CheckCircle, Send, Play, Pause } from 'lucide-react';
 import { SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
 import { supabase } from '@/integrations/supabase/client';
 import { useSpotify } from '@/context/SpotifyContext';
@@ -18,6 +18,7 @@ interface PlaylistDetailViewProps {
   isShared: boolean;
   sharedPlaylistId: string | null;
   onShareToggle: () => void;
+  onPlayTrack: (previewUrl: string | null) => void; // Added for audio playback
 }
 
 const formatDuration = (ms: number) => {
@@ -31,12 +32,13 @@ const gradients = [
   ['#6366F1', '#8B5CF6'], ['#EF4444', '#F59E0B'],
 ];
 
-export default function PlaylistDetailView({ playlist, tracks, artists, onBack, isShared, sharedPlaylistId, onShareToggle }: PlaylistDetailViewProps) {
+export default function PlaylistDetailView({ playlist, tracks, artists, onBack, isShared, sharedPlaylistId, onShareToggle, onPlayTrack }: PlaylistDetailViewProps) {
   const { session } = useSpotify();
   const [activeTab, setActiveTab] = useState<'overview' | 'songs' | 'social'>('overview');
   const [comments, setComments] = useState<CommentWithProfile[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentPlayingTrackId, setCurrentPlayingTrackId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -79,6 +81,19 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
     setIsSubmitting(false);
   };
 
+  const handleTrackPlayToggle = (track: SpotifyTrack) => {
+    if (currentPlayingTrackId === track.id) {
+      onPlayTrack(null); // Stop current track
+      setCurrentPlayingTrackId(null);
+    } else if (track.preview_url) {
+      onPlayTrack(track.preview_url);
+      setCurrentPlayingTrackId(track.id);
+    } else {
+      // Optionally, show a toast or message that no preview is available
+      console.log(`No preview available for ${track.name}`);
+    }
+  };
+
   const analysis = useMemo(() => {
     if (tracks.length === 0) return null;
     const totalDurationMs = tracks.reduce((sum, track) => sum + track.duration_ms, 0);
@@ -119,6 +134,14 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
               <Image src={track.album.images[0].url} alt={track.album.name} width={40} height={40} className="rounded mr-4" />
               <div className="flex-grow min-w-0"><p className="font-semibold truncate">{track.name}</p><p className="text-sm text-gray-400 truncate">{track.artists.map(a => a.name).join(', ')}</p></div>
               <span className="text-sm text-gray-400 ml-2">{formatDuration(track.duration_ms)}</span>
+              <button
+                onClick={() => handleTrackPlayToggle(track)}
+                className={`ml-4 p-2 rounded-full transition-colors ${track.preview_url ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-gray-700 text-gray-400 cursor-not-allowed'}`}
+                disabled={!track.preview_url}
+                title={track.preview_url ? "Play preview" : "No preview available"}
+              >
+                {currentPlayingTrackId === track.id ? <Pause size={16} /> : <Play size={16} />}
+              </button>
             </li>
           ))}</ul>
         </motion.div>
