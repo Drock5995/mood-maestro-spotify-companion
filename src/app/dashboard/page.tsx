@@ -159,61 +159,61 @@ function DashboardContent() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-green-900 to-black text-white p-6">
-      <div className="max-w-6xl mx-auto">
-        <header className="flex justify-between items-center mb-8 pb-4 border-b border-gray-700">
-          <h1 className="text-4xl font-extrabold text-green-400">
+    <main className="min-h-screen bg-gradient-to-br from-green-900 to-black text-white p-6 sm:p-8 md:p-10">
+      <div className="max-w-7xl mx-auto">
+        <header className="flex flex-col sm:flex-row justify-between items-center mb-8 pb-4 border-b border-gray-700">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-green-400 mb-4 sm:mb-0">
             Dashboard 🎨
           </h1>
           <button
             onClick={handleLogout}
-            className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-full transition duration-300 ease-in-out"
+            className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-5 rounded-full transition duration-300 ease-in-out transform hover:scale-105"
           >
             Logout
           </button>
         </header>
 
         {user && (
-          <section className="mb-8 bg-gray-800 bg-opacity-70 p-6 rounded-lg shadow-lg flex items-center space-x-4">
+          <section className="mb-10 bg-gray-800 bg-opacity-70 p-6 rounded-xl shadow-lg flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
             {user.images && user.images.length > 0 && (
               <Image
                 src={user.images[0].url}
                 alt={user.display_name || 'User'}
-                width={80}
-                height={80}
-                className="rounded-full border-2 border-green-500"
+                width={96}
+                height={96}
+                className="rounded-full border-4 border-green-500 shadow-md"
               />
             )}
-            <div>
-              <h2 className="text-3xl font-bold mb-1">Welcome, {user.display_name || user.id}!</h2>
-              <p className="text-gray-300">{user.email}</p>
+            <div className="text-center sm:text-left">
+              <h2 className="text-3xl sm:text-4xl font-bold mb-1 text-white">Welcome, {user.display_name || user.id}!</h2>
+              <p className="text-gray-300 text-lg">{user.email}</p>
             </div>
           </section>
         )}
 
-        <section className="mb-8">
-          <h2 className="text-3xl font-bold mb-4 text-green-300">Your Playlists 🎶</h2>
+        <section className="mb-10">
+          <h2 className="text-3xl font-bold mb-6 text-green-300">Your Playlists 🎶</h2>
           {playlists.length === 0 ? (
-            <p className="text-gray-400">No playlists found.</p>
+            <p className="text-gray-400 text-lg">No playlists found. Connect to Spotify to see your playlists here!</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {playlists.map((playlist) => (
                 <div 
                   key={playlist.id} 
-                  className={`bg-gray-800 bg-opacity-70 p-4 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer 
-                              ${selectedPlaylist?.id === playlist.id ? 'border-2 border-green-500' : ''}`}
+                  className={`bg-gray-800 bg-opacity-70 p-4 rounded-xl shadow-md hover:shadow-xl hover:bg-gray-700 transition-all duration-300 cursor-pointer 
+                              ${selectedPlaylist?.id === playlist.id ? 'border-2 border-green-500 ring-2 ring-green-500' : 'border border-transparent'}`}
                   onClick={() => fetchPlaylistDetails(playlist)}
                 >
                   {playlist.images && playlist.images.length > 0 && (
                     <Image
                       src={playlist.images[0].url}
                       alt={playlist.name}
-                      width={200}
-                      height={200}
-                      className="w-full h-48 object-cover rounded-md mb-3"
+                      width={250}
+                      height={250}
+                      className="w-full h-48 object-cover rounded-lg mb-3 shadow-sm"
                     />
                   )}
-                  <h3 className="text-xl font-semibold text-white mb-1">{playlist.name}</h3>
+                  <h3 className="text-xl font-semibold text-white mb-1 truncate">{playlist.name}</h3>
                   <p className="text-gray-400 text-sm">{playlist.tracks.total} tracks</p>
                   {playlist.description && (
                     <p className="text-gray-500 text-xs mt-2 line-clamp-2">{playlist.description}</p>
@@ -225,71 +225,71 @@ function DashboardContent() {
         </section>
 
         <section>
-          <h2 className="text-3xl font-bold mb-4 text-green-300">Playlist Vibe Analysis 📊</h2>
-          <div className="bg-gray-800 bg-opacity-70 p-6 rounded-lg shadow-lg">
+          <h2 className="text-3xl font-bold mb-6 text-green-300">Playlist Vibe Analysis 📊</h2>
+          <div className="bg-gray-800 bg-opacity-70 p-6 rounded-xl shadow-lg">
             {analysisLoading ? (
-              <div className="flex flex-col items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-green-500"></div>
-                <p className="mt-4 text-lg">Analyzing {selectedPlaylist?.name || 'playlist'} vibe...</p>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500"></div>
+                <p className="mt-4 text-xl text-green-300">Analyzing {selectedPlaylist?.name || 'playlist'} vibe...</p>
               </div>
             ) : selectedPlaylist && analysisData ? (
               <div>
-                <h3 className="text-2xl font-semibold mb-4 text-green-400">Vibe for &quot;{selectedPlaylist.name}&quot;</h3>
-                <p className="text-lg text-gray-200 mb-6">{analysisData.moodDescription}</p>
+                <h3 className="text-2xl sm:text-3xl font-semibold mb-4 text-green-400">Vibe for &quot;{selectedPlaylist.name}&quot;</h3>
+                <p className="text-lg text-gray-200 mb-8 leading-relaxed">{analysisData.moodDescription}</p>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-md">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg border border-gray-600">
                     <p className="text-gray-300 text-sm">Total Tracks</p>
-                    <p className="text-white text-xl font-bold">{analysisData.totalTracks}</p>
+                    <p className="text-white text-2xl font-bold mt-1">{analysisData.totalTracks}</p>
                   </div>
-                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-md">
+                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg border border-gray-600">
                     <p className="text-gray-300 text-sm">Unique Artists</p>
-                    <p className="text-white text-xl font-bold">{analysisData.uniqueArtists}</p>
+                    <p className="text-white text-2xl font-bold mt-1">{analysisData.uniqueArtists}</p>
                   </div>
-                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-md">
+                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg border border-gray-600">
                     <p className="text-gray-300 text-sm">Explicit Content</p>
-                    <p className="text-white text-xl font-bold">{analysisData.explicitPercentage.toFixed(0)}%</p>
+                    <p className="text-white text-2xl font-bold mt-1">{analysisData.explicitPercentage.toFixed(0)}%</p>
                   </div>
-                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-md">
+                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg border border-gray-600">
                     <p className="text-gray-300 text-sm">Average Popularity</p>
-                    <p className="text-white text-xl font-bold">{analysisData.averagePopularity.toFixed(0)}</p>
+                    <p className="text-white text-2xl font-bold mt-1">{analysisData.averagePopularity.toFixed(0)}</p>
                   </div>
                 </div>
 
-                <h4 className="text-xl font-semibold mt-6 mb-3 text-green-400">Tracks in &quot;{selectedPlaylist.name}&quot; ({playlistTracks.length})</h4>
-                <div className="max-h-60 overflow-y-auto pr-2">
+                <h4 className="text-xl sm:text-2xl font-semibold mt-6 mb-4 text-green-400">Tracks in &quot;{selectedPlaylist.name}&quot; ({playlistTracks.length})</h4>
+                <div className="max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                   {playlistTracks.length > 0 ? (
-                    <ul className="space-y-2">
+                    <ul className="space-y-3">
                       {playlistTracks.map(track => (
-                        <li key={track.id} className="flex items-center space-x-3 bg-gray-700 bg-opacity-50 p-2 rounded-md">
+                        <li key={track.id} className="flex items-center space-x-4 bg-gray-700 bg-opacity-50 p-3 rounded-lg hover:bg-gray-600 transition-colors duration-200">
                           {track.album?.images?.[0]?.url && (
                             <Image
                               src={track.album.images[0].url}
                               alt={track.album.name}
-                              width={40}
-                              height={40}
-                              className="rounded-sm"
+                              width={48}
+                              height={48}
+                              className="rounded-md shadow-sm"
                             />
                           )}
                           <div>
-                            <p className="text-white font-medium">{track.name}</p>
+                            <p className="text-white font-medium text-lg">{track.name}</p>
                             <p className="text-gray-400 text-sm">{track.artists.map(artist => artist.name).join(', ')}</p>
                           </div>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-gray-400">No tracks found for this playlist.</p>
+                    <p className="text-gray-400 text-lg">No tracks found for this playlist.</p>
                   )}
                 </div>
               </div>
             ) : (
-              <p className="text-gray-300">
+              <p className="text-gray-300 text-lg py-8 text-center">
                 Select a playlist above to see its vibe analysis!
               </p>
             )}
             {error && analysisLoading && (
-              <p className="text-red-400 mt-4">Error during analysis: {error}</p>
+              <p className="text-red-400 mt-4 text-center">Error during analysis: {error}</p>
             )}
           </div>
         </section>
