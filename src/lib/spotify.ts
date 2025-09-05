@@ -294,6 +294,19 @@ export class SpotifyAPI {
     return { ...playlist, trackDetails: tracks, audioFeatures };
   }
 
+  async searchTracks(query: string, limit: number = 1): Promise<SpotifyTrack[]> {
+    if (!query.trim()) {
+      return [];
+    }
+    const params = new URLSearchParams({
+      q: query,
+      type: 'track',
+      limit: limit.toString(),
+    });
+    const response = await this.makeRequest<{ tracks: { items: SpotifyTrack[] } }>(`/search?${params.toString()}`);
+    return response.tracks.items;
+  }
+
   async getLikedSongs(): Promise<SpotifyTrack[]> {
     const tracks: SpotifyTrack[] = [];
     let url = `/me/tracks?limit=50`;

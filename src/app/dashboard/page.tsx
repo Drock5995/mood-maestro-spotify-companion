@@ -8,6 +8,7 @@ import { analyzePlaylistMood, getPlaylistParametersFromPrompt } from '@/lib/mood
 import { PlaylistMoodModal } from '@/components/PlaylistMoodModal';
 import { MoodCreator } from '@/components/MoodCreator';
 import { GeneratedPlaylist } from '@/components/GeneratedPlaylist';
+import { TextToPlaylistCreator } from '@/components/TextToPlaylistCreator';
 
 const spotify = new SpotifyAPI();
 
@@ -38,6 +39,16 @@ function DashboardContent() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPlaylist, setGeneratedPlaylist] = useState<SpotifyTrack[] | null>(null);
   const [generatedPlaylistName, setGeneratedPlaylistName] = useState('');
+
+  // State for Text to Playlist
+  const [isSearching, setIsSearching] = useState(false);
+  const [foundTracks, setFoundTracks] = useState<SpotifyTrack[] | null>(null);
+  const [notFound, setNotFound] = useState<string[] | null>(null);
+  const [isSavingPlaylist, setIsSavingPlaylist] = useState(false);
+  const [playlistIsSaved, setPlaylistIsSaved] = useState(false);
+
+  // State to toggle between creators
+  const [activeCreator, setActiveCreator] = useState<'mood' | 'text'>('mood');
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -126,13 +137,11 @@ function DashboardContent() {
     setError(null);
   
     try {
-      // 1. Get parameters from the prompt
       const { playlistName, recommendationOptions } = getPlaylistParametersFromPrompt(prompt);
       setGeneratedPlaylistName(playlistName);
   
       const finalOptions: RecommendationOptions = { ...recommendationOptions, limit: 40 };
 
-      // 2. If the prompt didn't provide seed genres, let's get some from the user's library
       if (!finalOptions.seed_genres?.length) {
         const likedSongs = await spotify.getLikedSongs();
         if (likedSongs.length > 0) {
@@ -142,25 +151,21 @@ function DashboardContent() {
         }
       }
 
-      // 3. Ensure we have at least one seed as a fallback
       const hasSeeds = finalOptions.seed_artists?.length || finalOptions.seed_genres?.length || finalOptions.seed_tracks?.length;
       if (!hasSeeds) {
         console.log("No seeds found, using fallback genres.");
-        finalOptions.seed_genres = ['pop', 'indie']; // A safe fallback
+        finalOptions.seed_genres = ['pop', 'indie'];
       }
 
-      // 4. Get recommendations
       const { tracks: recommendedTracks } = await spotify.getRecommendations(finalOptions);
   
-      // 5. Sprinkle in a few liked songs (if any) and shuffle
       const likedSongs = await spotify.getLikedSongs();
       const likedSongsToAdd = likedSongs.length > 0 ? shuffleArray(likedSongs).slice(0, 10) : [];
       
       const finalPlaylist = shuffleArray([...likedSongsToAdd, ...recommendedTracks]);
-      // Remove duplicates to ensure a clean list
       const uniqueTracks = Array.from(new Map(finalPlaylist.map(track => [track.id, track])).values());
 
-      setGeneratedPlaylist(uniqueTracks.slice(0, 50)); // Limit final playlist size
+      setGeneratedPlaylist(uniqueTracks.slice(0, 50));
   
     } catch (err) {
       console.error("Error generating playlist:", err);
@@ -168,6 +173,64 @@ function DashboardContent() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleFindSongs = async (text: string) => {
+    setIsSearching(true);
+    setFoundTracks(null);
+    setNotFound(null);
+    setError(null);
+
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+    const searchPromises = lines.map(line => spotify.searchTracks(line, 1));
+
+    try {
+        const results = await Promise.all(searchPromises);
+        const found: SpotifyTrack[] = [];
+        const notFoundItems: string[] = [];
+
+        results.forEach((result, index) => {
+            if (result.length > 0) {
+                found.push(result[0]);
+            } else {
+                notFoundItems.push(lines[index]);
+            }
+        });
+
+        setFoundTracks(found);
+        setNotFound(notFoundItems);
+    } catch (err) {
+        console.error("Error searching for tracks:", err);
+        setError("An error occurred while searching for songs. Please try again.");
+    } finally {
+        setIsSearching(false);
+    }
+  };
+
+  const handleSavePlaylist = async (name: string, tracks: SpotifyTrack[]) => {
+      if (!user) {
+          setError("User not found. Cannot save playlist.");
+          return;
+      }
+      setIsSavingPlaylist(true);
+      setError(null);
+      try {
+          const newPlaylist = await spotify.createPlaylist(user.id, name, `Created from text by Ashley's Music Mood App.`);
+          const trackUris = tracks.map(track => track.uri);
+          await spotify.addTracksToPlaylist(newPlaylist.id, trackUris);
+          setPlaylistIsSaved(true);
+      } catch (err) {
+          console.error("Failed to save playlist:", err);
+          setError("Oops! Couldn't save the playlist. Please try again.");
+      } finally {
+          setIsSavingPlaylist(false);
+      }
+  };
+
+  const clearTextToPlaylist = () => {
+      setFoundTracks(null);
+      setNotFound(null);
+      setPlaylistIsSaved(false);
   };
 
   if (isLoading) {
@@ -213,15 +276,47 @@ function DashboardContent() {
         </div>
 
         <div className="mb-8">
-          {generatedPlaylist && user ? (
-            <GeneratedPlaylist 
-              playlistName={generatedPlaylistName}
-              tracks={generatedPlaylist}
-              userId={user.id}
-              onClear={() => setGeneratedPlaylist(null)}
+          <div className="flex border-b border-gray-700 mb-6">
+            <button 
+                onClick={() => setActiveCreator('mood')}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${activeCreator === 'mood' ? 'text-white border-b-2 border-green-500' : 'text-gray-400 hover:text-white'}`}
+            >
+                ✨ AI Mood DJ
+            </button>
+            <button 
+                onClick={() => setActiveCreator('text')}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${activeCreator === 'text' ? 'text-white border-b-2 border-green-500' : 'text-gray-400 hover:text-white'}`}
+            >
+                📋 Create from Text
+            </button>
+          </div>
+
+          {activeCreator === 'mood' && (
+            <>
+              {generatedPlaylist && user ? (
+                <GeneratedPlaylist 
+                  playlistName={generatedPlaylistName}
+                  tracks={generatedPlaylist}
+                  userId={user.id}
+                  onClear={() => setGeneratedPlaylist(null)}
+                />
+              ) : (
+                <MoodCreator onGenerate={handleGeneratePlaylist} isLoading={isGenerating} />
+              )}
+            </>
+          )}
+
+          {activeCreator === 'text' && (
+            <TextToPlaylistCreator
+              onFindSongs={handleFindSongs}
+              onSavePlaylist={handleSavePlaylist}
+              onClear={clearTextToPlaylist}
+              isSearching={isSearching}
+              isSaving={isSavingPlaylist}
+              foundTracks={foundTracks}
+              notFound={notFound}
+              isSaved={playlistIsSaved}
             />
-          ) : (
-            <MoodCreator onGenerate={handleGeneratePlaylist} isLoading={isGenerating} />
           )}
         </div>
 
