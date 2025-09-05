@@ -85,29 +85,21 @@ export function getPlaylistParametersFromPrompt(prompt: string): { playlistName:
   const recommendationOptions: RecommendationOptions = {};
   const seed_genres: string[] = [];
 
-  // Keyword matching for moods and themes
+  // Keyword matching for moods and themes. All target_* parameters have been removed.
   if (lowerCasePrompt.includes('happy') || lowerCasePrompt.includes('joyful') || lowerCasePrompt.includes('upbeat')) {
     playlistName = 'Happy Vibes';
-    // REMOVED target_valence and target_energy to make the request less restrictive and prevent errors.
-    // The genres themselves will provide the upbeat feel.
     seed_genres.push('pop', 'dance-pop');
   }
   if (lowerCasePrompt.includes('sad') || lowerCasePrompt.includes('melancholic') || lowerCasePrompt.includes('rainy day') || lowerCasePrompt.includes('somber')) {
     playlistName = 'Melancholic Mood';
-    recommendationOptions.target_valence = 0.2;
-    recommendationOptions.target_energy = 0.3;
     seed_genres.push('sad', 'acoustic');
   }
   if (lowerCasePrompt.includes('energetic') || lowerCasePrompt.includes('workout') || lowerCasePrompt.includes('party') || lowerCasePrompt.includes('hype')) {
     playlistName = 'Energy Boost';
-    recommendationOptions.target_energy = 0.9;
-    recommendationOptions.target_danceability = 0.8;
     seed_genres.push('dance', 'electronic');
   }
   if (lowerCasePrompt.includes('calm') || lowerCasePrompt.includes('relax') || lowerCasePrompt.includes('study') || lowerCasePrompt.includes('focus')) {
     playlistName = 'Calm & Focused';
-    recommendationOptions.target_energy = 0.2;
-    recommendationOptions.target_danceability = 0.3;
     seed_genres.push('ambient', 'chill');
   }
   if (lowerCasePrompt.includes('80s') || lowerCasePrompt.includes('eighties')) {
@@ -116,14 +108,10 @@ export function getPlaylistParametersFromPrompt(prompt: string): { playlistName:
   }
   if (lowerCasePrompt.includes('coffee shop') || lowerCasePrompt.includes('acoustic')) {
     playlistName = 'Coffee Shop Vibe';
-    recommendationOptions.target_energy = 0.4;
-    recommendationOptions.target_valence = 0.6;
     seed_genres.push('acoustic', 'indie-pop');
   }
   if (lowerCasePrompt.includes('intense') || lowerCasePrompt.includes('angry') || lowerCasePrompt.includes('training montage')) {
     playlistName = 'Intense Motivation';
-    recommendationOptions.target_energy = 0.9;
-    recommendationOptions.target_valence = 0.4;
     seed_genres.push('rock', 'metal', 'industrial');
   }
 
