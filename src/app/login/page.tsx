@@ -19,7 +19,7 @@ export default function LoginPage() {
           'playlist-read-collaborative',
           'user-top-read',
         ].join(' '),
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: 'https://ashley-mood-maestro.netlify.app/dashboard',
       },
     });
 
