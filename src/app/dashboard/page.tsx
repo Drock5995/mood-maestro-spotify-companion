@@ -12,9 +12,10 @@ function DashboardContent() {
   const [spotifyApi, setSpotifyApi] = useState<SpotifyAPI | null>(null);
   const [user, setUser] = useState<SpotifyUser | null>(null);
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
-  const [topArtists, setTopArtists] = useState<SpotifyArtist[]>([]); // New state for top artists
+  const [topArtists, setTopArtists] = useState<SpotifyArtist[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState<SpotifyPlaylist | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
+  const [playlistArtists, setPlaylistArtists] = useState<SpotifyArtist[]>([]);
   const [loading, setLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,29 +24,22 @@ function DashboardContent() {
     const accessToken = searchParams.get('access_token');
     const refreshToken = searchParams.get('refresh_token');
     const expiresIn = searchParams.get('expires_in');
-    const grantedScopes = searchParams.get('granted_scopes');
 
     if (accessToken && refreshToken && expiresIn) {
       localStorage.setItem('spotify_access_token', accessToken);
       localStorage.setItem('spotify_refresh_token', refreshToken);
       localStorage.setItem('spotify_token_expires_at', (Date.now() + parseInt(expiresIn) * 1000).toString());
-      localStorage.setItem('spotify_granted_scopes', grantedScopes || '');
-
       router.replace('/dashboard', undefined);
-
       const api = new SpotifyAPI(accessToken);
       setSpotifyApi(api);
     } else {
       const storedAccessToken = localStorage.getItem('spotify_access_token');
-      const storedRefreshToken = localStorage.getItem('spotify_refresh_token');
       const storedExpiresAt = localStorage.getItem('spotify_token_expires_at');
-
-      if (storedAccessToken && storedRefreshToken && storedExpiresAt && Date.now() < parseInt(storedExpiresAt)) {
+      if (storedAccessToken && storedExpiresAt && Date.now() < parseInt(storedExpiresAt)) {
         const api = new SpotifyAPI(storedAccessToken);
         setSpotifyApi(api);
       } else {
         router.push('/login');
-        return;
       }
     }
   }, [searchParams, router]);
@@ -54,11 +48,13 @@ function DashboardContent() {
     const fetchData = async () => {
       if (spotifyApi) {
         try {
-          const currentUser = await spotifyApi.getCurrentUser();
+          const [currentUser, userPlaylists, userTopArtists] = await Promise.all([
+            spotifyApi.getCurrentUser(),
+            spotifyApi.getUserPlaylists(),
+            spotifyApi.getUserTopArtists(10),
+          ]);
           setUser(currentUser);
-          const userPlaylists = await spotifyApi.getUserPlaylists();
           setPlaylists(userPlaylists);
-          const userTopArtists = await spotifyApi.getUserTopArtists(10); // Fetch top 10 artists
           setTopArtists(userTopArtists);
         } catch (err) {
           console.error('Failed to fetch Spotify data:', err);
@@ -79,11 +75,18 @@ function DashboardContent() {
     setSelectedPlaylist(playlist);
     setAnalysisLoading(true);
     setPlaylistTracks([]);
+    setPlaylistArtists([]);
     setError(null);
 
     try {
       const tracks = await spotifyApi.getPlaylistTracks(playlist.id);
       setPlaylistTracks(tracks);
+
+      if (tracks.length > 0) {
+        const artistIds = [...new Set(tracks.flatMap(track => track.artists.map(artist => artist.id)))];
+        const artistDetails = await spotifyApi.getSeveralArtists(artistIds);
+        setPlaylistArtists(artistDetails);
+      }
     } catch (err) {
       console.error('Failed to fetch playlist details:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred while fetching playlist details.');
@@ -93,9 +96,7 @@ function DashboardContent() {
   };
 
   const handleLogout = () => {
-    if (spotifyApi) {
-      spotifyApi.clearTokens();
-    }
+    if (spotifyApi) spotifyApi.clearTokens();
     localStorage.clear();
     router.push('/login');
   };
@@ -105,37 +106,37 @@ function DashboardContent() {
 
     const totalTracks = playlistTracks.length;
     const explicitTracks = playlistTracks.filter(track => track.explicit).length;
-    const explicitPercentage = (explicitTracks / totalTracks) * 100;
-    const averagePopularity = playlistTracks.reduce((sum, track) => sum + track.popularity, 0) / totalTracks;
-    const uniqueArtists = new Set(playlistTracks.flatMap(track => track.artists.map(artist => artist.name))).size;
+    const explicitPercentage = totalTracks > 0 ? (explicitTracks / totalTracks) * 100 : 0;
+    const averagePopularity = totalTracks > 0 ? playlistTracks.reduce((sum, track) => sum + track.popularity, 0) / totalTracks : 0;
+    const uniqueArtistsCount = new Set(playlistTracks.flatMap(track => track.artists.map(artist => artist.name))).size;
 
-    let moodDescription = `This playlist contains ${totalTracks} tracks by ${uniqueArtists} unique artists. `;
+    const topArtistsInPlaylist = Object.entries(
+      playlistTracks.flatMap(track => track.artists).reduce((acc, artist) => {
+        acc[artist.name] = (acc[artist.name] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    ).sort(([, a], [, b]) => b - a).slice(0, 5).map(([name]) => name);
 
-    if (explicitTracks > 0) {
-      moodDescription += `Approximately ${explicitPercentage.toFixed(0)}% of the tracks contain explicit content, suggesting a potentially mature or edgy vibe. `;
-    } else {
-      moodDescription += `It appears to be free of explicit content, indicating a generally clean listening experience. `;
-    }
+    const releaseYears = playlistTracks.map(track => parseInt(track.album.release_date.substring(0, 4))).filter(year => !isNaN(year));
+    const averageReleaseYear = releaseYears.length > 0 ? Math.round(releaseYears.reduce((sum, year) => sum + year, 0) / releaseYears.length) : 'N/A';
 
-    if (averagePopularity > 75) {
-      moodDescription += `With a high average popularity score of ${averagePopularity.toFixed(0)}, this playlist is likely filled with well-known hits and trending songs, perfect for an energetic or widely appealing mood.`;
-    } else if (averagePopularity > 50) {
-      moodDescription += `With an average popularity score of ${averagePopularity.toFixed(0)}, it offers a balanced mix of popular and moderately known tracks, suitable for a diverse and engaging listening experience.`;
-    } else if (averagePopularity > 25) {
-      moodDescription += `With an average popularity score of ${averagePopularity.toFixed(0)}, this playlist leans towards more niche or discovery-oriented tracks, potentially offering a unique and reflective mood.`;
-    } else {
-      moodDescription += `With a lower average popularity score of ${averagePopularity.toFixed(0)}, this playlist seems to feature more obscure or deep-cut tracks, ideal for focused listening or exploring new sounds.`;
-    }
+    const topGenres = Object.entries(
+      playlistArtists.flatMap(artist => artist.genres).reduce((acc, genre) => {
+        acc[genre] = (acc[genre] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    ).sort(([, a], [, b]) => b - a).slice(0, 5).map(([name]) => name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
 
     return {
       totalTracks,
-      explicitTracks,
       explicitPercentage,
       averagePopularity,
-      uniqueArtists,
-      moodDescription,
+      uniqueArtistsCount,
+      topArtistsInPlaylist,
+      averageReleaseYear,
+      topGenres,
     };
-  }, [playlistTracks]);
+  }, [playlistTracks, playlistArtists]);
 
   if (loading) {
     return (
@@ -151,10 +152,7 @@ function DashboardContent() {
       <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-red-950 to-black text-white">
         <h1 className="text-3xl font-bold mb-4 text-red-400">Error</h1>
         <p className="text-lg mb-6 text-red-300">{error}</p>
-        <button
-          onClick={() => router.push('/login')}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full transition duration-300 ease-in-out"
-        >
+        <button onClick={() => router.push('/login')} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full transition duration-300 ease-in-out">
           Try Logging In Again
         </button>
       </div>
@@ -165,28 +163,15 @@ function DashboardContent() {
     <main className="min-h-screen bg-gradient-to-br from-green-950 to-black text-white p-6 sm:p-8 md:p-10">
       <div className="max-w-7xl mx-auto">
         <header className="flex flex-col sm:flex-row justify-between items-center mb-10 pb-4 border-b border-gray-700">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-green-400 mb-4 sm:mb-0">
-            Dashboard 🎨
-          </h1>
-          <button
-            onClick={handleLogout}
-            className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-5 rounded-full transition duration-300 ease-in-out transform hover:scale-105"
-          >
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-green-400 mb-4 sm:mb-0">Dashboard 🎨</h1>
+          <button onClick={handleLogout} className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-5 rounded-full transition duration-300 ease-in-out transform hover:scale-105">
             Logout
           </button>
         </header>
 
         {user && (
           <section className="mb-12 bg-gray-900 bg-opacity-70 p-6 rounded-xl shadow-lg flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 border border-green-800">
-            {user.images && user.images.length > 0 && (
-              <Image
-                src={user.images[0].url}
-                alt={user.display_name || 'User'}
-                width={96}
-                height={96}
-                className="rounded-full border-4 border-green-500 shadow-md"
-              />
-            )}
+            {user.images?.[0]?.url && <Image src={user.images[0].url} alt={user.display_name || 'User'} width={96} height={96} className="rounded-full border-4 border-green-500 shadow-md" />}
             <div className="text-center sm:text-left">
               <h2 className="text-3xl sm:text-4xl font-bold mb-1 text-white">Welcome, {user.display_name || user.id}!</h2>
               <p className="text-gray-300 text-lg">{user.email}</p>
@@ -196,131 +181,61 @@ function DashboardContent() {
 
         <section className="mb-12">
           <h2 className="text-3xl font-bold mb-6 text-green-300">Your Top Artists 🎤</h2>
-          {topArtists.length === 0 ? (
-            <p className="text-gray-400 text-lg">No top artists found. Listen to more music on Spotify to see them here!</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {topArtists.map((artist) => (
-                <div 
-                  key={artist.id} 
-                  className="bg-gray-800 bg-opacity-70 p-4 rounded-xl shadow-md hover:shadow-xl hover:bg-gray-700 transition-all duration-300 cursor-pointer border border-transparent"
-                >
-                  {artist.images && artist.images.length > 0 && (
-                    <Image
-                      src={artist.images[0].url}
-                      alt={artist.name}
-                      width={250}
-                      height={250}
-                      className="w-full h-48 object-cover rounded-lg mb-3 shadow-sm"
-                    />
-                  )}
-                  <h3 className="text-xl font-semibold text-white mb-1 truncate">{artist.name}</h3>
-                  <p className="text-gray-400 text-sm">{artist.genres.slice(0, 2).join(', ')}</p>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {topArtists.map((artist) => (
+              <div key={artist.id} className="bg-gray-800 bg-opacity-70 p-4 rounded-xl shadow-md hover:shadow-xl hover:bg-gray-700 transition-all duration-300 cursor-pointer border border-transparent">
+                {artist.images?.[0]?.url && <Image src={artist.images[0].url} alt={artist.name} width={250} height={250} className="w-full h-48 object-cover rounded-lg mb-3 shadow-sm" />}
+                <h3 className="text-xl font-semibold text-white mb-1 truncate">{artist.name}</h3>
+                <p className="text-gray-400 text-sm capitalize">{artist.genres.slice(0, 2).join(', ')}</p>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section className="mb-12">
           <h2 className="text-3xl font-bold mb-6 text-green-300">Your Playlists 🎶</h2>
-          {playlists.length === 0 ? (
-            <p className="text-gray-400 text-lg">No playlists found. Connect to Spotify to see your playlists here!</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {playlists.map((playlist) => (
-                <div 
-                  key={playlist.id} 
-                  className={`bg-gray-800 bg-opacity-70 p-4 rounded-xl shadow-md hover:shadow-xl hover:bg-gray-700 transition-all duration-300 cursor-pointer 
-                              ${selectedPlaylist?.id === playlist.id ? 'border-2 border-green-500 ring-2 ring-green-500' : 'border border-transparent'}`}
-                  onClick={() => fetchPlaylistDetails(playlist)}
-                >
-                  {playlist.images && playlist.images.length > 0 && (
-                    <Image
-                      src={playlist.images[0].url}
-                      alt={playlist.name}
-                      width={250}
-                      height={250}
-                      className="w-full h-48 object-cover rounded-lg mb-3 shadow-sm"
-                    />
-                  )}
-                  <h3 className="text-xl font-semibold text-white mb-1 truncate">{playlist.name}</h3>
-                  <p className="text-gray-400 text-sm">{playlist.tracks.total} tracks</p>
-                  {playlist.description && (
-                    <p className="text-gray-500 text-xs mt-2 line-clamp-2">{playlist.description}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {playlists.map((playlist) => (
+              <div key={playlist.id} className={`bg-gray-800 bg-opacity-70 p-4 rounded-xl shadow-md hover:shadow-xl hover:bg-gray-700 transition-all duration-300 cursor-pointer ${selectedPlaylist?.id === playlist.id ? 'border-2 border-green-500 ring-2 ring-green-500' : 'border border-transparent'}`} onClick={() => fetchPlaylistDetails(playlist)}>
+                {playlist.images?.[0]?.url && <Image src={playlist.images[0].url} alt={playlist.name} width={250} height={250} className="w-full h-48 object-cover rounded-lg mb-3 shadow-sm" />}
+                <h3 className="text-xl font-semibold text-white mb-1 truncate">{playlist.name}</h3>
+                <p className="text-gray-400 text-sm">{playlist.tracks.total} tracks</p>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section>
-          <h2 className="text-3xl font-bold mb-6 text-green-300">Playlist Vibe Analysis 📊</h2>
+          <h2 className="text-3xl font-bold mb-6 text-green-300">Playlist Deep Dive 📊</h2>
           <div className="bg-gray-900 bg-opacity-70 p-6 rounded-xl shadow-lg border border-green-800">
             {analysisLoading ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500"></div>
-                <p className="mt-4 text-xl text-green-300">Analyzing {selectedPlaylist?.name || 'playlist'} vibe...</p>
+                <p className="mt-4 text-xl text-green-300">Analyzing {selectedPlaylist?.name || 'playlist'}...</p>
               </div>
             ) : selectedPlaylist && analysisData ? (
               <div>
-                <h3 className="text-2xl sm:text-3xl font-semibold mb-4 text-green-400">Vibe for &quot;{selectedPlaylist.name}&quot;</h3>
-                <p className="text-lg text-gray-200 mb-8 leading-relaxed">{analysisData.moodDescription}</p>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                  <div className="bg-gray-800 bg-opacity-50 p-4 rounded-lg border border-gray-700">
-                    <p className="text-gray-300 text-sm">Total Tracks</p>
-                    <p className="text-white text-2xl font-bold mt-1">{analysisData.totalTracks}</p>
+                <h3 className="text-2xl sm:text-3xl font-semibold mb-6 text-green-400">Analysis for &quot;{selectedPlaylist.name}&quot;</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                    <h4 className="text-green-300 font-bold mb-2">Key Stats</h4>
+                    <p><strong>Avg. Popularity:</strong> {analysisData.averagePopularity.toFixed(0)}</p>
+                    <p><strong>Avg. Release Year:</strong> {analysisData.averageReleaseYear}</p>
+                    <p><strong>Explicit Content:</strong> {analysisData.explicitPercentage.toFixed(0)}%</p>
+                    <p><strong>Unique Artists:</strong> {analysisData.uniqueArtistsCount}</p>
                   </div>
-                  <div className="bg-gray-800 bg-opacity-50 p-4 rounded-lg border border-gray-700">
-                    <p className="text-gray-300 text-sm">Unique Artists</p>
-                    <p className="text-white text-2xl font-bold mt-1">{analysisData.uniqueArtists}</p>
+                  <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                    <h4 className="text-green-300 font-bold mb-2">Top Artists</h4>
+                    <ul className="list-decimal list-inside">{analysisData.topArtistsInPlaylist.map(artist => <li key={artist}>{artist}</li>)}</ul>
                   </div>
-                  <div className="bg-gray-800 bg-opacity-50 p-4 rounded-lg border border-gray-700">
-                    <p className="text-gray-300 text-sm">Explicit Content</p>
-                    <p className="text-white text-2xl font-bold mt-1">{analysisData.explicitPercentage.toFixed(0)}%</p>
+                  <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                    <h4 className="text-green-300 font-bold mb-2">Top Genres</h4>
+                    <ul className="list-decimal list-inside">{analysisData.topGenres.map(genre => <li key={genre}>{genre}</li>)}</ul>
                   </div>
-                  <div className="bg-gray-800 bg-opacity-50 p-4 rounded-lg border border-gray-700">
-                    <p className="text-gray-300 text-sm">Average Popularity</p>
-                    <p className="text-white text-2xl font-bold mt-1">{analysisData.averagePopularity.toFixed(0)}</p>
-                  </div>
-                </div>
-
-                <h4 className="text-xl sm:text-2xl font-semibold mt-6 mb-4 text-green-400">Tracks in &quot;{selectedPlaylist.name}&quot; ({playlistTracks.length})</h4>
-                <div className="max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                  {playlistTracks.length > 0 ? (
-                    <ul className="space-y-3">
-                      {playlistTracks.map(track => (
-                        <li key={track.id} className="flex items-center space-x-4 bg-gray-800 bg-opacity-50 p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200 border border-gray-700">
-                          {track.album?.images?.[0]?.url && (
-                            <Image
-                              src={track.album.images[0].url}
-                              alt={track.album.name}
-                              width={48}
-                              height={48}
-                              className="rounded-md shadow-sm"
-                            />
-                          )}
-                          <div>
-                            <p className="text-white font-medium text-lg">{track.name}</p>
-                            <p className="text-gray-400 text-sm">{track.artists.map(artist => artist.name).join(', ')}</p>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-gray-400 text-lg">No tracks found for this playlist.</p>
-                  )}
                 </div>
               </div>
             ) : (
-              <p className="text-gray-300 text-lg py-8 text-center">
-                Select a playlist above to see its vibe analysis!
-              </p>
-            )}
-            {error && analysisLoading && (
-              <p className="text-red-400 mt-4 text-center">Error during analysis: {error}</p>
+              <p className="text-gray-300 text-lg py-8 text-center">Select a playlist above for a deep dive analysis!</p>
             )}
           </div>
         </section>
@@ -329,7 +244,6 @@ function DashboardContent() {
   );
 }
 
-// Wrap DashboardContent in Suspense for useSearchParams
 export default function DashboardPage() {
   return (
     <Suspense fallback={

@@ -32,11 +32,13 @@ export interface SpotifyTrack {
     id: string;
     name: string;
     images: Array<{ url: string; height: number; width: number }>;
+    release_date: string;
   };
   uri: string;
   preview_url: string | null;
-  popularity: number; // Added popularity
-  explicit: boolean; // Added explicit status
+  popularity: number;
+  explicit: boolean;
+  duration_ms: number;
 }
 
 export interface SpotifyArtist {
@@ -133,22 +135,23 @@ export class SpotifyAPI {
 
   async getPlaylistTracks(playlistId: string): Promise<SpotifyTrack[]> {
     const response = await this.makeRequest<{
-      items: Array<{ track: SpotifyTrack }>;
-      next: string | null;
-      total: number;
-    }>(`/playlists/${playlistId}/tracks?limit=100`); // Fetch up to 100 tracks
+      items: Array<{ track: SpotifyTrack | null }>;
+    }>(`/playlists/${playlistId}/tracks?limit=100&fields=items(track(id,name,artists(id,name),album(id,name,images,release_date),uri,preview_url,popularity,explicit,duration_ms))`);
     
-    // Filter out null tracks and ensure popularity and explicit fields are present
-    return response.items.map(item => item.track).filter(track => track !== null).map(track => ({
-      id: track.id,
-      name: track.name,
-      artists: track.artists,
-      album: track.album,
-      uri: track.uri,
-      preview_url: track.preview_url,
-      popularity: track.popularity || 0, // Default to 0 if not present
-      explicit: track.explicit || false, // Default to false if not present
-    }));
+    return response.items
+      .map(item => item.track)
+      .filter((track): track is SpotifyTrack => track !== null);
+  }
+
+  async getSeveralArtists(artistIds: string[]): Promise<SpotifyArtist[]> {
+    if (artistIds.length === 0) {
+      return [];
+    }
+    // Spotify API limit is 50 artists per request
+    const response = await this.makeRequest<{ artists: SpotifyArtist[] }>(
+      `/artists?ids=${artistIds.slice(0, 50).join(',')}`
+    );
+    return response.artists.filter(artist => artist !== null);
   }
 
   async getUserTopArtists(limit: number = 5): Promise<SpotifyArtist[]> {
@@ -156,7 +159,7 @@ export class SpotifyAPI {
       items: SpotifyArtist[];
       next: string | null;
       total: number;
-    }>(`/me/top/artists?limit=${limit}&time_range=medium_term`); // medium_term for last 6 months
+    }>(`/me/top/artists?limit=${limit}&time_range=medium_term`);
     return response.items;
   }
 }
