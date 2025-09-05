@@ -113,6 +113,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
     return null;
   }
 
+  // This comment is added to force re-compilation and address a persistent build error.
   return (
     <SpotifyContext.Provider value={contextValue}>
       <div className="h-screen bg-black/20 lg:p-4 lg:flex lg:gap-4">
@@ -150,7 +151,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
               </motion.div>
             </>
           )}
-        </AnPresence>
+        </AnimatePresence>
 
         <div className="flex-1 flex flex-col overflow-hidden">
           <MobileHeader onMenuClick={() => setIsSidebarOpen(true)} />
