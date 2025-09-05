@@ -180,7 +180,7 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
     <motion.div
       initial={{ opacity: 0, x: '100%' }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: '100%' }}
       transition={{ duration: 0.5, ease: 'easeInOut' }}
-      className="absolute inset-0 bg-gray-900 p-6 flex flex-col overflow-y-auto"
+      className="absolute inset-0 bg-gray-900 p-6 flex flex-col"
     >
       <svg width="0" height="0" style={{ position: 'absolute' }}><defs>{gradients.map((grad, index) => (
         <linearGradient id={`color${index}`} x1="0" y1="0" x2="1" y2="0" key={index}><stop offset="0%" stopColor={grad[0]} /><stop offset="100%" stopColor={grad[1]} /></linearGradient>
@@ -210,7 +210,7 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
         ))}
       </nav>
 
-      <div className="flex-1 overflow-hidden">
+      <div className={`flex-1 ${activeTab === 'social' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
         <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
       </div>
     </motion.div>
