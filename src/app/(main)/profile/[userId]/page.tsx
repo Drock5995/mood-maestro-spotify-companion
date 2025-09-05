@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { User, Music } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CommunityPlaylistCard, SharedPlaylist } from '@/components/CommunityPlaylistCard';
+import { useSpotify } from '@/context/SpotifyContext';
 
 interface Profile {
   display_name: string | null;
@@ -15,6 +16,7 @@ interface Profile {
 export default function ProfilePage() {
   const params = useParams();
   const userId = params.userId as string;
+  const { session } = useSpotify();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [playlists, setPlaylists] = useState<SharedPlaylist[]>([]);
@@ -27,11 +29,30 @@ export default function ProfilePage() {
       setLoading(true);
 
       // Fetch profile info
-      const { data: profileData } = await supabase
+      let { data: profileData } = await supabase
         .from('profiles')
         .select('display_name, avatar_url')
         .eq('id', userId)
         .single();
+      
+      // If profile doesn't exist and it's the current user's profile, create it.
+      if (!profileData && session?.user?.id === userId) {
+        const { data: newProfile, error } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            display_name: session.user.user_metadata.full_name,
+            avatar_url: session.user.user_metadata.avatar_url,
+          })
+          .select('display_name, avatar_url')
+          .single();
+
+        if (error) {
+          console.error("Error creating profile:", error);
+        } else {
+          profileData = newProfile;
+        }
+      }
       
       setProfile(profileData);
 
@@ -57,8 +78,11 @@ export default function ProfilePage() {
       setLoading(false);
     };
 
-    fetchProfileData();
-  }, [userId]);
+    // Only run fetch if session is available, to ensure we can check for own profile
+    if (session !== undefined) {
+        fetchProfileData();
+    }
+  }, [userId, session]);
 
   if (loading) {
     return (
