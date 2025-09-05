@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
+import PlaylistPoster from '@/components/PlaylistPoster';
 
 // Helper function to format milliseconds to MM:SS
 const formatDuration = (ms: number) => {
@@ -27,6 +28,7 @@ function DashboardContent() {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: keyof SpotifyTrack | 'release_date'; direction: 'ascending' | 'descending' } | null>(null);
+  const [showPoster, setShowPoster] = useState(false);
 
   useEffect(() => {
     const accessToken = searchParams.get('access_token');
@@ -259,7 +261,15 @@ function DashboardContent() {
               </div>
             ) : selectedPlaylist && analysisData ? (
               <div>
-                <h3 className="text-2xl sm:text-3xl font-semibold mb-6 text-green-400">Analysis for &quot;{selectedPlaylist.name}&quot;</h3>
+                <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
+                  <h3 className="text-2xl sm:text-3xl font-semibold text-green-400 mb-4 sm:mb-0">Analysis for &quot;{selectedPlaylist.name}&quot;</h3>
+                  <button
+                    onClick={() => setShowPoster(true)}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-full transition duration-300 ease-in-out transform hover:scale-105 shadow-lg"
+                  >
+                    Generate Poster
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                   <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
                     <h4 className="text-green-300 font-bold mb-2">Key Stats</h4>
@@ -319,6 +329,13 @@ function DashboardContent() {
           </div>
         </section>
       </div>
+      {showPoster && selectedPlaylist && (
+        <PlaylistPoster 
+          playlist={selectedPlaylist} 
+          tracks={playlistTracks} 
+          onClose={() => setShowPoster(false)} 
+        />
+      )}
     </main>
   );
 }
