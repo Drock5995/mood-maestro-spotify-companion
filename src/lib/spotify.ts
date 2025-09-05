@@ -223,19 +223,25 @@ export class SpotifyAPI {
 
     if (!response.ok) {
       const errorBody = await response.text();
+      // Handle 401 Unauthorized with a retry
       if (response.status === 401 && retry) {
         console.warn('[SpotifyAPI] Received 401 Unauthorized. Attempting token refresh and retrying request...');
-        this.clearTokens();
         try {
           await this.refreshAccessToken();
-          return this.makeRequest<T>(endpoint, options, false);
+          return this.makeRequest<T>(endpoint, options, false); // Retry only once
         } catch (refreshError) {
           console.error('[SpotifyAPI] Failed to refresh token after 401, redirecting to login.', refreshError);
-          if (typeof window !== 'undefined') {
-            window.location.href = '/';
-          }
+          this.clearTokens();
+          if (typeof window !== 'undefined') { window.location.href = '/'; }
           throw refreshError;
         }
+      }
+      // Handle 403 Forbidden by forcing a logout
+      if (response.status === 403) {
+        console.error('[SpotifyAPI] Received 403 Forbidden. Token is likely invalid. Forcing logout.');
+        this.clearTokens();
+        if (typeof window !== 'undefined') { window.location.href = '/'; }
+        throw new Error(`Spotify API error: 403 Forbidden. Your session may be invalid.`);
       }
       throw new Error(`Spotify API error: ${response.status} ${response.statusText} - ${errorBody}`);
     }

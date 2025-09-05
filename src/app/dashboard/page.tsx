@@ -104,8 +104,7 @@ function DashboardContent() {
       } catch (error) {
         console.error('Error initializing dashboard:', error);
         setError('Failed to load your music data. Please try logging in again.');
-        spotify.clearTokens();
-        setTimeout(() => router.push('/'), 2000);
+        // The makeRequest function will handle redirecting, so we don't need to do it here.
         setIsLoading(false);
         setIsAnalyzingLibrary(false);
       }
@@ -134,10 +133,10 @@ function DashboardContent() {
         }
       } catch (e) {
         console.error("Could not analyze library:", e);
-        if (e instanceof Error && e.message.includes('403')) {
-          setError("It looks like the app doesn't have permission to analyze your liked songs. Please log out and log back in to grant the necessary permissions. This is usually a one-time fix!");
-        } else {
-          setError("An unknown error occurred while analyzing your library.");
+        // The makeRequest function will handle the redirect for 403 errors.
+        // We can set a more generic error here for other cases.
+        if (e instanceof Error && !e.message.includes('403')) {
+          setError("An error occurred while analyzing your library's audio DNA. Some features may be unavailable.");
         }
       } finally {
         setIsAnalyzingLibrary(false);
@@ -163,11 +162,7 @@ function DashboardContent() {
       setShowMoodModal(true);
     } catch (err) {
       console.error('Error during mood analysis:', err);
-      if (err instanceof Error && err.message.includes('403')) {
-        setError("It looks like the app doesn't have permission to analyze this playlist. Please log out and log back in to grant the necessary permissions.");
-      } else {
-        setError('Failed to analyze playlist mood. Please try again.');
-      }
+      setError('Failed to analyze playlist mood. Please try again.');
     } finally {
       setAnalyzingPlaylistId(null);
     }
