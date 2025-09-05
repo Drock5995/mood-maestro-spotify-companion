@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -70,10 +71,10 @@ export const CommunityPlaylistCard = ({ playlist, index }: CommunityPlaylistCard
       <div className="absolute bottom-0 left-0 p-4 text-white w-full">
         <h3 className="text-xl font-bold truncate">{playlist.playlist_name}</h3>
         <div className="flex items-center justify-between mt-2">
-          <div className="flex items-center space-x-2 min-w-0">
+          <Link href={`/profile/${playlist.user_id}`} className="flex items-center space-x-2 min-w-0 group/profile">
             <Image src={ownerAvatar} alt={ownerName} width={24} height={24} className="rounded-full flex-shrink-0" />
-            <span className="text-sm font-medium truncate">{ownerName}</span>
-          </div>
+            <span className="text-sm font-medium truncate group-hover/profile:underline">{ownerName}</span>
+          </Link>
           <button onClick={handleLike} className="flex items-center space-x-1 bg-black/50 px-2 py-1 rounded-full transition-colors hover:bg-black/70 flex-shrink-0">
             <Heart className={`w-4 h-4 transition-all ${isLiked ? 'text-pink-500 fill-current' : 'text-pink-400'}`} />
             <span className="text-white font-semibold text-sm">{likeCount}</span>

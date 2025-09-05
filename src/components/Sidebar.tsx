@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Heart, Music, LogOut } from 'lucide-react';
+import { Home, Users, Heart, Music, LogOut, User } from 'lucide-react';
 import { SpotifyPlaylist } from '@/lib/spotify';
 import { useSpotify } from '@/context/SpotifyContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +15,7 @@ interface SidebarProps {
 
 const NavLink = ({ href, icon: Icon, label }: { href: string, icon: React.ElementType, label: string }) => {
   const pathname = usePathname();
-  const isActive = pathname === href;
+  const isActive = pathname.startsWith(href);
 
   return (
     <Link href={href} className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${
@@ -30,7 +30,7 @@ const NavLink = ({ href, icon: Icon, label }: { href: string, icon: React.Elemen
 };
 
 export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: SidebarProps) {
-  const { user, playlists } = useSpotify();
+  const { user, playlists, session } = useSpotify();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -60,6 +60,7 @@ export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: Sidebar
         <NavLink href="/dashboard" icon={Home} label="Dashboard" />
         <NavLink href="/community" icon={Users} label="Community" />
         <NavLink href="/friends" icon={Heart} label="Matchmaker" />
+        {session?.user && <NavLink href={`/profile/${session.user.id}`} icon={User} label="My Profile" />}
       </nav>
 
       <div className="border-t border-white/10 flex-grow overflow-y-auto pt-4 pr-1 -mr-2">
