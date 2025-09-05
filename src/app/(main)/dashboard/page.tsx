@@ -19,18 +19,20 @@ function DashboardContent() {
   const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
   const [playlistArtists, setPlaylistArtists] = useState<SpotifyArtist[]>([]);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-  const [sharedPlaylistIds, setSharedPlaylistIds] = useState<Set<string>>(new Set());
+  const [sharedPlaylistsMap, setSharedPlaylistsMap] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     const fetchSharedPlaylists = async () => {
       if (session?.user) {
         const { data } = await supabase
           .from('shared_playlists')
-          .select('spotify_playlist_id')
+          .select('id, spotify_playlist_id')
           .eq('user_id', session.user.id);
 
         if (data) {
-          setSharedPlaylistIds(new Set(data.map(p => p.spotify_playlist_id)));
+          const newMap = new Map<string, string>();
+          data.forEach(p => newMap.set(p.spotify_playlist_id, p.id));
+          setSharedPlaylistsMap(newMap);
         }
       }
     };
@@ -40,8 +42,8 @@ function DashboardContent() {
   const handleShareToggle = async (playlist: SpotifyPlaylist) => {
     if (!session?.user) return;
 
-    const isCurrentlyShared = sharedPlaylistIds.has(playlist.id);
-    const newSharedIds = new Set(sharedPlaylistIds);
+    const isCurrentlyShared = sharedPlaylistsMap.has(playlist.id);
+    const newMap = new Map(sharedPlaylistsMap);
 
     if (isCurrentlyShared) {
       const { error } = await supabase
@@ -50,22 +52,24 @@ function DashboardContent() {
         .match({ user_id: session.user.id, spotify_playlist_id: playlist.id });
       
       if (!error) {
-        newSharedIds.delete(playlist.id);
-        setSharedPlaylistIds(newSharedIds);
+        newMap.delete(playlist.id);
+        setSharedPlaylistsMap(newMap);
       }
     } else {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('shared_playlists')
         .insert({
           user_id: session.user.id,
           spotify_playlist_id: playlist.id,
           playlist_name: playlist.name,
           playlist_cover_url: playlist.images?.[0]?.url,
-        });
+        })
+        .select('id, spotify_playlist_id')
+        .single();
       
-      if (!error) {
-        newSharedIds.add(playlist.id);
-        setSharedPlaylistIds(newSharedIds);
+      if (!error && data) {
+        newMap.set(data.spotify_playlist_id, data.id);
+        setSharedPlaylistsMap(newMap);
       }
     }
   };
@@ -151,7 +155,8 @@ function DashboardContent() {
               tracks={playlistTracks}
               artists={playlistArtists}
               onBack={handleBack}
-              isShared={sharedPlaylistIds.has(selectedPlaylist.id)}
+              isShared={sharedPlaylistsMap.has(selectedPlaylist.id)}
+              sharedPlaylistId={sharedPlaylistsMap.get(selectedPlaylist.id) || null}
               onShareToggle={() => handleShareToggle(selectedPlaylist)}
             />
           )}

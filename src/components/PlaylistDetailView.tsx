@@ -16,6 +16,7 @@ interface PlaylistDetailViewProps {
   artists: SpotifyArtist[];
   onBack: () => void;
   isShared: boolean;
+  sharedPlaylistId: string | null;
   onShareToggle: () => void;
 }
 
@@ -30,30 +31,12 @@ const gradients = [
   ['#6366F1', '#8B5CF6'], ['#EF4444', '#F59E0B'],
 ];
 
-export default function PlaylistDetailView({ playlist, tracks, artists, onBack, isShared, onShareToggle }: PlaylistDetailViewProps) {
+export default function PlaylistDetailView({ playlist, tracks, artists, onBack, isShared, sharedPlaylistId, onShareToggle }: PlaylistDetailViewProps) {
   const { session } = useSpotify();
   const [activeTab, setActiveTab] = useState<'overview' | 'songs' | 'social'>('overview');
-  const [sharedPlaylistId, setSharedPlaylistId] = useState<string | null>(null);
   const [comments, setComments] = useState<CommentWithProfile[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!isShared || !playlist) {
-      setSharedPlaylistId(null);
-      return;
-    }
-
-    const findSharedPlaylist = async () => {
-      const { data } = await supabase
-        .from('shared_playlists')
-        .select('id')
-        .eq('spotify_playlist_id', playlist.id)
-        .single();
-      setSharedPlaylistId(data?.id || null);
-    };
-    findSharedPlaylist();
-  }, [playlist, isShared]);
 
   useEffect(() => {
     const fetchComments = async () => {
