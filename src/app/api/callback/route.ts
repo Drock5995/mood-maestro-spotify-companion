@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
     dashboardUrl.searchParams.set('access_token', tokenData.access_token);
     dashboardUrl.searchParams.set('refresh_token', tokenData.refresh_token);
     dashboardUrl.searchParams.set('expires_in', tokenData.expires_in.toString());
+    dashboardUrl.searchParams.set('granted_scopes', tokenData.scope);
     
     return NextResponse.redirect(dashboardUrl);
   } catch (error) {

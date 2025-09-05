@@ -64,6 +64,16 @@ function DashboardContent() {
       const accessToken = searchParams.get('access_token');
       const refreshToken = searchParams.get('refresh_token');
       const expiresIn = searchParams.get('expires_in');
+      const grantedScopes = searchParams.get('granted_scopes'); // Diagnostic: get granted scopes
+
+      let hasLibraryPermission = true;
+      if (grantedScopes) {
+        console.log("Granted scopes from Spotify:", grantedScopes);
+        if (!grantedScopes.includes('user-library-read')) {
+          hasLibraryPermission = false;
+          setError("Diagnostic Info: The 'user-library-read' permission was not granted by Spotify. This is required to analyze your liked songs. Please try revoking the app's access in your Spotify account settings, then log in again.");
+        }
+      }
 
       if (accessToken) {
         spotify.setAccessToken(accessToken, refreshToken || undefined, expiresIn ? parseInt(expiresIn) : undefined);
@@ -84,8 +94,12 @@ function DashboardContent() {
         setPlaylists(playlistData);
         setIsLoading(false); // Basic data loaded, show page
 
-        // Now, perform the library analysis
-        analyzeLibrary();
+        // Now, perform the library analysis only if we have permission
+        if (hasLibraryPermission) {
+          analyzeLibrary();
+        } else {
+          setIsAnalyzingLibrary(false); // Skip analysis if permission is missing
+        }
 
       } catch (error) {
         console.error('Error initializing dashboard:', error);
@@ -329,7 +343,7 @@ function DashboardContent() {
             </div>
           ) : (
             <div className="text-center text-gray-400 p-8 bg-gray-800/50 rounded-xl">
-              Could not analyze your library. You might not have any liked songs.
+              Could not analyze your library. You might not have any liked songs, or the app may be missing permissions.
             </div>
           )}
         </section>
@@ -440,7 +454,7 @@ function DashboardContent() {
             <div className="text-center py-12">
               <h3 className="text-xl font-semibold text-white mb-2">No playlists found</h3>
               <p className="text-gray-300">
-                Create some playlists in Spotify and they&apos;ll appear here!
+                Create some playlists in Spotify and they'll appear here!
               </p>
             </div>
           )}
