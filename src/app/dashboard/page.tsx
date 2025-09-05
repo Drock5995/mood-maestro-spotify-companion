@@ -28,12 +28,13 @@ function DashboardContent() {
   const [user, setUser] = useState<SpotifyUser | null>(null);
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [generalError, setGeneralError] = useState<string | null>(null); // Renamed to generalError
   
   // State for Library Analysis
   const [libraryAnalysis, setLibraryAnalysis] = useState<MoodAnalysis | null>(null);
   const [topArtists, setTopArtists] = useState<[string, number][]>([]);
   const [isAnalyzingLibrary, setIsAnalyzingLibrary] = useState(true);
+  const [libraryAnalysisError, setLibraryAnalysisError] = useState<string | null>(null); // New state for specific library error
 
   // State for Mood Analysis Modal
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistWithTracks | null>(null);
@@ -66,12 +67,12 @@ function DashboardContent() {
       const expiresIn = searchParams.get('expires_in');
       const grantedScopes = searchParams.get('granted_scopes'); // Diagnostic: get granted scopes
 
-      let hasLibraryPermission = true;
+      let hasLibraryReadPermission = true;
       if (grantedScopes) {
         console.log("Granted scopes from Spotify:", grantedScopes);
         if (!grantedScopes.includes('user-library-read')) {
-          hasLibraryPermission = false;
-          setError("Diagnostic Info: The 'user-library-read' permission was not granted by Spotify. This is required to analyze your liked songs. Please try revoking the app's access in your Spotify account settings, then log in again.");
+          hasLibraryReadPermission = false;
+          setLibraryAnalysisError("The 'user-library-read' permission was not granted by Spotify. This is required to analyze your liked songs. Please try revoking the app's access in your Spotify account settings, then log in again.");
         }
       }
 
@@ -95,7 +96,7 @@ function DashboardContent() {
         setIsLoading(false); // Basic data loaded, show page
 
         // Now, perform the library analysis only if we have permission
-        if (hasLibraryPermission) {
+        if (hasLibraryReadPermission) {
           analyzeLibrary();
         } else {
           setIsAnalyzingLibrary(false); // Skip analysis if permission is missing
@@ -103,7 +104,7 @@ function DashboardContent() {
 
       } catch (error) {
         console.error('Error initializing dashboard:', error);
-        setError('Failed to load your music data. Please try logging in again.');
+        setGeneralError('Failed to load your music data. Please try logging in again.');
         // The makeRequest function will handle redirecting, so we don't need to do it here.
         setIsLoading(false);
         setIsAnalyzingLibrary(false);
@@ -112,38 +113,62 @@ function DashboardContent() {
 
     const analyzeLibrary = async () => {
       setIsAnalyzingLibrary(true);
+      setLibraryAnalysisError(null); // Clear previous library error
+      setLibraryAnalysis(null); // Clear previous mood analysis
+      setTopArtists([]); // Clear previous top artists
+
       try {
         const likedSongs = await spotify.getLikedSongs();
-        if (likedSongs.length > 0) {
+
+        if (likedSongs.length === 0) {
+          setLibraryAnalysisError("You don't have any liked songs to analyze. Like some songs on Spotify to see your Library DNA!");
+          return; // Exit if no liked songs
+        }
+
+        // Always calculate top artists if liked songs are available
+        const artistCounts = likedSongs.reduce((acc, track) => {
+          track.artists.forEach(artist => {
+            acc[artist.name] = (acc[artist.name] || 0) + 1;
+          });
+          return acc;
+        }, {} as Record<string, number>);
+        const sortedArtists = Object.entries(artistCounts).sort((a, b) => b[1] - a[1]);
+        setTopArtists(sortedArtists.slice(0, 5));
+
+        // Attempt to get audio features
+        try {
           const trackIds = likedSongs.map(t => t.id);
           const audioFeatures = await spotify.getAudioFeatures(trackIds);
           const analysis = analyzePlaylistMood(audioFeatures);
           setLibraryAnalysis(analysis);
-
-          // Calculate top artists
-          const artistCounts = likedSongs.reduce((acc, track) => {
-            track.artists.forEach(artist => {
-              acc[artist.name] = (acc[artist.name] || 0) + 1;
-            });
-            return acc;
-          }, {} as Record<string, number>);
-
-          const sortedArtists = Object.entries(artistCounts).sort((a, b) => b[1] - a[1]);
-          setTopArtists(sortedArtists.slice(0, 5));
+        } catch (audioFeaturesError: unknown) {
+          console.error("Could not fetch audio features for library:", audioFeaturesError);
+          let errorMessage = "An unknown error occurred while fetching audio features for your liked songs. Mood analysis for your library is unavailable.";
+          if (audioFeaturesError instanceof Error) {
+            if (audioFeaturesError.message.includes('403 Forbidden')) {
+              errorMessage = "Spotify denied access to audio features (403 Forbidden). This is often a temporary issue or requires a fresh authorization. Please try logging out, then go to your Spotify account settings (Apps section) to 'REMOVE ACCESS' for this app, and then log in again.";
+            } else if (audioFeaturesError.message.includes('No access token available')) {
+              errorMessage = "Your Spotify session has expired. Please log out and log back in.";
+            } else {
+              errorMessage = `Error fetching audio features: ${audioFeaturesError.message}. Mood analysis for your library is unavailable.`;
+            }
+          }
+          setLibraryAnalysisError(errorMessage); // Set specific library error
         }
-      } catch (e: unknown) { // Use unknown for better type safety
-        console.error("Could not analyze library:", e);
-        let errorMessage = "An unknown error occurred while analyzing your library's audio DNA. Some features may be unavailable.";
+
+      } catch (e: unknown) {
+        console.error("Could not analyze library (initial fetch of liked songs failed):", e);
+        let errorMessage = "Failed to load your liked songs. Please try logging in again.";
         if (e instanceof Error) {
           if (e.message.includes('403 Forbidden')) {
-            errorMessage = "Spotify denied access to audio features for your liked songs (403 Forbidden). This might be a temporary issue, or your Spotify session might need to be refreshed. Please try logging out and logging back in.";
+            errorMessage = "Spotify denied access to your liked songs (403 Forbidden). This might be a temporary issue, or your Spotify session might need to be refreshed. Please try logging out and logging back in.";
           } else if (e.message.includes('No access token available')) {
             errorMessage = "Your Spotify session has expired. Please log out and log back in.";
           } else {
-            errorMessage = `Error analyzing library: ${e.message}. Some features may be unavailable.`;
+            errorMessage = `Error loading liked songs: ${e.message}.`;
           }
         }
-        setError(errorMessage);
+        setLibraryAnalysisError(errorMessage);
       } finally {
         setIsAnalyzingLibrary(false);
       }
@@ -159,7 +184,7 @@ function DashboardContent() {
 
   const handleAnalyzePlaylist = async (playlist: SpotifyPlaylist) => {
     setAnalyzingPlaylistId(playlist.id);
-    setError(null);
+    setGeneralError(null); // Clear general error
     try {
       const playlistWithDetails = await spotify.getPlaylistWithDetails(playlist.id);
       const analysis = analyzePlaylistMood(playlistWithDetails.audioFeatures || []);
@@ -168,7 +193,7 @@ function DashboardContent() {
       setShowMoodModal(true);
     } catch (err) {
       console.error('Error during mood analysis:', err);
-      setError('Failed to analyze playlist mood. Please try again.');
+      setGeneralError('Failed to analyze playlist mood. Please try again.');
     } finally {
       setAnalyzingPlaylistId(null);
     }
@@ -184,7 +209,7 @@ function DashboardContent() {
     setIsGenerating(true);
     setGeneratedPlaylist(null);
     setGeneratedPlaylistName('');
-    setError(null);
+    setGeneralError(null); // Clear general error
     try {
       const { playlistName, recommendationOptions } = getPlaylistParametersFromPrompt(prompt);
       setGeneratedPlaylistName(playlistName);
@@ -208,7 +233,7 @@ function DashboardContent() {
       setGeneratedPlaylist(uniqueTracks.slice(0, 50));
     } catch (err) {
       console.error("Error generating playlist:", err);
-      setError("Failed to generate playlist. Please try again.");
+      setGeneralError("Failed to generate playlist. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -218,7 +243,7 @@ function DashboardContent() {
     setIsSearching(true);
     setFoundTracks(null);
     setNotFound(null);
-    setError(null);
+    setGeneralError(null); // Clear general error
     const lines = text.split('\n').map(line => line.trim()).filter(line => line);
     const searchPromises = lines.map(line => spotify.searchTracks(line, 1));
     try {
@@ -236,7 +261,7 @@ function DashboardContent() {
         setNotFound(notFoundItems);
     } catch (err) {
         console.error("Error searching for tracks:", err);
-        setError("An error occurred while searching for songs. Please try again.");
+        setGeneralError("An error occurred while searching for songs. Please try again.");
     } finally {
         setIsSearching(false);
     }
@@ -244,11 +269,11 @@ function DashboardContent() {
 
   const handleSavePlaylist = async (name: string, tracks: SpotifyTrack[]) => {
       if (!user) {
-          setError("User not found. Cannot save playlist.");
+          setGeneralError("User not found. Cannot save playlist.");
           return;
       }
       setIsSavingPlaylist(true);
-      setError(null);
+      setGeneralError(null); // Clear general error
       try {
           const newPlaylist = await spotify.createPlaylist(user.id, name, `Created from text by Ashley's Music Mood App.`);
           const trackUris = tracks.map(track => track.uri);
@@ -256,7 +281,7 @@ function DashboardContent() {
           setPlaylistIsSaved(true);
       } catch (err) {
           console.error("Failed to save playlist:", err);
-          setError("Oops! Couldn't save the playlist. Please try again.");
+          setGeneralError("Oops! Couldn't save the playlist. Please try again.");
       } finally {
           setIsSavingPlaylist(false);
       }
@@ -310,9 +335,9 @@ function DashboardContent() {
           </button>
         </header>
 
-        {error && (
+        {generalError && (
           <div className="bg-red-900/50 border border-red-500/50 text-red-200 p-4 rounded-lg mb-8 text-center">
-            <p>{error}</p>
+            <p>{generalError}</p>
           </div>
         )}
 
@@ -323,9 +348,17 @@ function DashboardContent() {
               <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               Analyzing your liked songs...
             </div>
-          ) : libraryAnalysis ? (
+          ) : (
             <div className="grid md:grid-cols-2 gap-6">
-              <MoodCard analysis={libraryAnalysis} />
+              {libraryAnalysis ? (
+                <MoodCard analysis={libraryAnalysis} />
+              ) : (
+                <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50 flex items-center justify-center">
+                  <p className="text-gray-400 text-center">
+                    {libraryAnalysisError || "Mood analysis for your library is unavailable."}
+                  </p>
+                </div>
+              )}
               <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
                 <h3 className="text-xl font-bold text-white mb-4">Top Artists</h3>
                 {topArtists.length > 0 ? (
@@ -341,10 +374,6 @@ function DashboardContent() {
                   <p className="text-gray-400">No top artists found from your liked songs.</p>
                 )}
               </div>
-            </div>
-          ) : (
-            <div className="text-center text-gray-400 p-8 bg-gray-800/50 rounded-xl">
-              Could not analyze your library. You might not have any liked songs, or the app may be missing permissions.
             </div>
           )}
         </section>
