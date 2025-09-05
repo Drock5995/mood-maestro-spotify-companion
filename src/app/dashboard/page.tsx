@@ -2,14 +2,15 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, PlaylistWithTracks, MoodAnalysis, SpotifyTrack, RecommendationOptions } from '@/lib/spotify';
 import { analyzePlaylistMood, getPlaylistParametersFromPrompt } from '@/lib/mood-analysis';
 import { PlaylistMoodModal } from '@/components/PlaylistMoodModal';
-import { MoodCreator } from '@/components/MoodCreator';
-import { GeneratedPlaylist } from '@/components/GeneratedPlaylist';
-import { TextToPlaylistCreator } from '@/components/TextToPlaylistCreator';
-import { MoodCard } from '@/components/MoodCard';
+
+// Import new modular components
+import { DashboardHeader } from '@/components/DashboardHeader';
+import { LibraryDNASection } from '@/components/LibraryDNASection';
+import { PlaylistToolsSection } from '@/components/PlaylistToolsSection';
+import { UserPlaylistsSection } from '@/components/UserPlaylistsSection';
 
 const spotify = new SpotifyAPI();
 
@@ -28,13 +29,13 @@ function DashboardContent() {
   const [user, setUser] = useState<SpotifyUser | null>(null);
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [generalError, setGeneralError] = useState<string | null>(null); // Renamed to generalError
+  const [generalError, setGeneralError] = useState<string | null>(null);
   
   // State for Library Analysis
   const [libraryAnalysis, setLibraryAnalysis] = useState<MoodAnalysis | null>(null);
   const [topArtists, setTopArtists] = useState<[string, number][]>([]);
   const [isAnalyzingLibrary, setIsAnalyzingLibrary] = useState(true);
-  const [libraryAnalysisError, setLibraryAnalysisError] = useState<string | null>(null); // New state for specific library error
+  const [libraryAnalysisError, setLibraryAnalysisError] = useState<string | null>(null);
 
   // State for Mood Analysis Modal
   const [selectedPlaylist, setSelectedPlaylist] = useState<PlaylistWithTracks | null>(null);
@@ -54,9 +55,6 @@ function DashboardContent() {
   const [isSavingPlaylist, setIsSavingPlaylist] = useState(false);
   const [playlistIsSaved, setPlaylistIsSaved] = useState(false);
 
-  // State to toggle between creators
-  const [activeCreator, setActiveCreator] = useState<'mood' | 'text'>('mood');
-
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -65,7 +63,7 @@ function DashboardContent() {
       const accessToken = searchParams.get('access_token');
       const refreshToken = searchParams.get('refresh_token');
       const expiresIn = searchParams.get('expires_in');
-      const grantedScopes = searchParams.get('granted_scopes'); // Diagnostic: get granted scopes
+      const grantedScopes = searchParams.get('granted_scopes');
 
       let hasLibraryReadPermission = true;
       if (grantedScopes) {
@@ -93,19 +91,17 @@ function DashboardContent() {
         ]);
         setUser(userData);
         setPlaylists(playlistData);
-        setIsLoading(false); // Basic data loaded, show page
+        setIsLoading(false);
 
-        // Now, perform the library analysis only if we have permission
         if (hasLibraryReadPermission) {
           analyzeLibrary();
         } else {
-          setIsAnalyzingLibrary(false); // Skip analysis if permission is missing
+          setIsAnalyzingLibrary(false);
         }
 
       } catch (error) {
         console.error('Error initializing dashboard:', error);
         setGeneralError('Failed to load your music data. Please try logging in again.');
-        // The makeRequest function will handle redirecting, so we don't need to do it here.
         setIsLoading(false);
         setIsAnalyzingLibrary(false);
       }
@@ -113,19 +109,18 @@ function DashboardContent() {
 
     const analyzeLibrary = async () => {
       setIsAnalyzingLibrary(true);
-      setLibraryAnalysisError(null); // Clear previous library error
-      setLibraryAnalysis(null); // Clear previous mood analysis
-      setTopArtists([]); // Clear previous top artists
+      setLibraryAnalysisError(null);
+      setLibraryAnalysis(null);
+      setTopArtists([]);
 
       try {
         const likedSongs = await spotify.getLikedSongs();
 
         if (likedSongs.length === 0) {
           setLibraryAnalysisError("You don't have any liked songs to analyze. Like some songs on Spotify to see your Library DNA!");
-          return; // Exit if no liked songs
+          return;
         }
 
-        // Always calculate top artists if liked songs are available
         const artistCounts = likedSongs.reduce((acc, track) => {
           track.artists.forEach(artist => {
             acc[artist.name] = (acc[artist.name] || 0) + 1;
@@ -135,7 +130,6 @@ function DashboardContent() {
         const sortedArtists = Object.entries(artistCounts).sort((a, b) => b[1] - a[1]);
         setTopArtists(sortedArtists.slice(0, 5));
 
-        // Attempt to get audio features
         try {
           const trackIds = likedSongs.map(t => t.id);
           const audioFeatures = await spotify.getAudioFeatures(trackIds);
@@ -153,7 +147,7 @@ function DashboardContent() {
               errorMessage = `Error fetching audio features: ${audioFeaturesError.message}. Mood analysis for your library is unavailable.`;
             }
           }
-          setLibraryAnalysisError(errorMessage); // Set specific library error
+          setLibraryAnalysisError(errorMessage);
         }
 
       } catch (e: unknown) {
@@ -184,7 +178,7 @@ function DashboardContent() {
 
   const handleAnalyzePlaylist = async (playlist: SpotifyPlaylist) => {
     setAnalyzingPlaylistId(playlist.id);
-    setGeneralError(null); // Clear general error
+    setGeneralError(null);
     try {
       const playlistWithDetails = await spotify.getPlaylistWithDetails(playlist.id);
       const analysis = analyzePlaylistMood(playlistWithDetails.audioFeatures || []);
@@ -209,7 +203,7 @@ function DashboardContent() {
     setIsGenerating(true);
     setGeneratedPlaylist(null);
     setGeneratedPlaylistName('');
-    setGeneralError(null); // Clear general error
+    setGeneralError(null);
     try {
       const { playlistName, recommendationOptions } = getPlaylistParametersFromPrompt(prompt);
       setGeneratedPlaylistName(playlistName);
@@ -243,7 +237,7 @@ function DashboardContent() {
     setIsSearching(true);
     setFoundTracks(null);
     setNotFound(null);
-    setGeneralError(null); // Clear general error
+    setGeneralError(null);
     const lines = text.split('\n').map(line => line.trim()).filter(line => line);
     const searchPromises = lines.map(line => spotify.searchTracks(line, 1));
     try {
@@ -273,7 +267,7 @@ function DashboardContent() {
           return;
       }
       setIsSavingPlaylist(true);
-      setGeneralError(null); // Clear general error
+      setGeneralError(null);
       try {
           const newPlaylist = await spotify.createPlaylist(user.id, name, `Created from text by Ashley's Music Mood App.`);
           const trackUris = tracks.map(track => track.uri);
@@ -307,33 +301,7 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-900 via-black to-green-800">
       <div className="container mx-auto px-4 py-8">
-        <header className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            {user?.images?.[0] && (
-              <Image
-                src={user.images[0].url}
-                alt={user.display_name || 'User avatar'}
-                width={48}
-                height={48}
-                className="w-12 h-12 rounded-full border-2 border-green-500"
-              />
-            )}
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white">
-                Hey {user?.display_name || 'Ashley'}! 🎵
-              </h1>
-              <p className="text-green-200">
-                Welcome to your music dashboard.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-full transition-colors text-sm"
-          >
-            Logout
-          </button>
-        </header>
+        <DashboardHeader user={user} onLogout={handleLogout} />
 
         {generalError && (
           <div className="bg-red-900/50 border border-red-500/50 text-red-200 p-4 rounded-lg mb-8 text-center">
@@ -341,154 +309,35 @@ function DashboardContent() {
           </div>
         )}
 
-        <section className="mb-12">
-          <h2 className="text-3xl font-bold text-white mb-4">Your Library DNA 🧬</h2>
-          {isAnalyzingLibrary ? (
-            <div className="text-center text-gray-300 p-8 bg-gray-800/50 rounded-xl">
-              <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              Analyzing your liked songs...
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 gap-6">
-              {libraryAnalysis ? (
-                <MoodCard analysis={libraryAnalysis} />
-              ) : (
-                <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50 flex items-center justify-center">
-                  <p className="text-gray-400 text-center">
-                    {libraryAnalysisError || "Mood analysis for your library is unavailable."}
-                  </p>
-                </div>
-              )}
-              <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
-                <h3 className="text-xl font-bold text-white mb-4">Top Artists</h3>
-                {topArtists.length > 0 ? (
-                  <ul className="space-y-3">
-                    {topArtists.map(([name, count]) => (
-                      <li key={name} className="flex items-center justify-between text-white">
-                        <span>{name}</span>
-                        <span className="text-sm text-gray-400">{count} liked songs</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-gray-400">No top artists found from your liked songs.</p>
-                )}
-              </div>
-            </div>
-          )}
-        </section>
+        <LibraryDNASection
+          isAnalyzingLibrary={isAnalyzingLibrary}
+          libraryAnalysis={libraryAnalysis}
+          libraryAnalysisError={libraryAnalysisError}
+          topArtists={topArtists}
+        />
 
-        <section className="mb-12">
-          <h2 className="text-3xl font-bold text-white mb-4">Playlist Tools 🛠️</h2>
-          <div className="flex border-b border-gray-700 mb-6">
-            <button 
-                onClick={() => setActiveCreator('mood')}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${activeCreator === 'mood' ? 'text-white border-b-2 border-green-500' : 'text-gray-400 hover:text-white'}`}
-            >
-                ✨ AI Mood DJ
-            </button>
-            <button 
-                onClick={() => setActiveCreator('text')}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${activeCreator === 'text' ? 'text-white border-b-2 border-green-500' : 'text-gray-400 hover:text-white'}`}
-            >
-                📋 Create from Text
-            </button>
-          </div>
+        <PlaylistToolsSection
+          onGeneratePlaylist={handleGeneratePlaylist}
+          isGenerating={isGenerating}
+          generatedPlaylist={generatedPlaylist}
+          generatedPlaylistName={generatedPlaylistName}
+          userId={user?.id || null}
+          onClearGeneratedPlaylist={() => setGeneratedPlaylist(null)}
+          onFindSongs={handleFindSongs}
+          onSavePlaylist={handleSavePlaylist}
+          onClearTextToPlaylist={clearTextToPlaylist}
+          isSearching={isSearching}
+          isSavingPlaylist={isSavingPlaylist}
+          foundTracks={foundTracks}
+          notFound={notFound}
+          playlistIsSaved={playlistIsSaved}
+        />
 
-          {activeCreator === 'mood' && (
-            <>
-              {generatedPlaylist && user ? (
-                <GeneratedPlaylist 
-                  playlistName={generatedPlaylistName}
-                  tracks={generatedPlaylist}
-                  userId={user.id}
-                  onClear={() => setGeneratedPlaylist(null)}
-                />
-              ) : (
-                <MoodCreator onGenerate={handleGeneratePlaylist} isLoading={isGenerating} />
-              )}
-            </>
-          )}
-
-          {activeCreator === 'text' && (
-            <TextToPlaylistCreator
-              onFindSongs={handleFindSongs}
-              onSavePlaylist={handleSavePlaylist}
-              onClear={clearTextToPlaylist}
-              isSearching={isSearching}
-              isSaving={isSavingPlaylist}
-              foundTracks={foundTracks}
-              notFound={notFound}
-              isSaved={playlistIsSaved}
-            />
-          )}
-        </section>
-
-        <section>
-          <h2 className="text-3xl font-bold text-white mb-4">Your Playlists</h2>
-          {playlists.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {playlists.map((playlist) => (
-                <div
-                  key={playlist.id}
-                  className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-4 hover:bg-gray-700/50 transition-all duration-200 border border-gray-700/50 hover:border-green-500/50"
-                >
-                  <div className="aspect-square mb-4 rounded-lg overflow-hidden bg-gray-700 relative">
-                    {playlist.images?.[0] ? (
-                      <Image
-                        src={playlist.images[0].url}
-                        alt={playlist.name}
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <svg className="w-12 h-12 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <h3 className="font-semibold text-white text-lg mb-1 line-clamp-2">
-                    {playlist.name}
-                  </h3>
-                  <p className="text-gray-300 text-sm mb-2 line-clamp-2">
-                    {playlist.description || 'No description'}
-                  </p>
-                  <p className="text-green-400 text-sm mb-3">
-                    {playlist.tracks.total} track{playlist.tracks.total !== 1 ? 's' : ''}
-                  </p>
-                  
-                  <button
-                    onClick={() => handleAnalyzePlaylist(playlist)}
-                    disabled={!!analyzingPlaylistId}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 text-white px-4 py-2 rounded-full transition-all duration-200 text-sm font-medium flex items-center justify-center space-x-2"
-                  >
-                    {analyzingPlaylistId === playlist.id ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Analyzing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>🎨</span>
-                        <span>Analyze Mood</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <h3 className="text-xl font-semibold text-white mb-2">No playlists found</h3>
-              <p className="text-gray-300">
-                Create some playlists in Spotify and they&apos;ll appear here!
-              </p>
-            </div>
-          )}
-        </section>
+        <UserPlaylistsSection
+          playlists={playlists}
+          onAnalyzePlaylist={handleAnalyzePlaylist}
+          analyzingPlaylistId={analyzingPlaylistId}
+        />
       </div>
 
       {selectedPlaylist && moodAnalysis && (
