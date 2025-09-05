@@ -8,16 +8,67 @@ import { SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
 import { useSpotify } from '@/context/SpotifyContext';
 import PlaylistCard from '@/components/PlaylistCard';
 import PlaylistDetailView from '@/components/PlaylistDetailView';
+import { supabase } from '@/integrations/supabase/client';
 
 function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { spotifyApi, playlists, loading } = useSpotify();
+  const { spotifyApi, playlists, loading, session } = useSpotify();
 
   const [selectedPlaylist, setSelectedPlaylist] = useState<SpotifyPlaylist | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
   const [playlistArtists, setPlaylistArtists] = useState<SpotifyArtist[]>([]);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [sharedPlaylistIds, setSharedPlaylistIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const fetchSharedPlaylists = async () => {
+      if (session?.user) {
+        const { data } = await supabase
+          .from('shared_playlists')
+          .select('spotify_playlist_id')
+          .eq('user_id', session.user.id);
+
+        if (data) {
+          setSharedPlaylistIds(new Set(data.map(p => p.spotify_playlist_id)));
+        }
+      }
+    };
+    fetchSharedPlaylists();
+  }, [session]);
+
+  const handleShareToggle = async (playlist: SpotifyPlaylist) => {
+    if (!session?.user) return;
+
+    const isCurrentlyShared = sharedPlaylistIds.has(playlist.id);
+    const newSharedIds = new Set(sharedPlaylistIds);
+
+    if (isCurrentlyShared) {
+      const { error } = await supabase
+        .from('shared_playlists')
+        .delete()
+        .match({ user_id: session.user.id, spotify_playlist_id: playlist.id });
+      
+      if (!error) {
+        newSharedIds.delete(playlist.id);
+        setSharedPlaylistIds(newSharedIds);
+      }
+    } else {
+      const { error } = await supabase
+        .from('shared_playlists')
+        .insert({
+          user_id: session.user.id,
+          spotify_playlist_id: playlist.id,
+          playlist_name: playlist.name,
+          playlist_cover_url: playlist.images?.[0]?.url,
+        });
+      
+      if (!error) {
+        newSharedIds.add(playlist.id);
+        setSharedPlaylistIds(newSharedIds);
+      }
+    }
+  };
 
   const handlePlaylistSelect = useCallback(async (playlist: SpotifyPlaylist) => {
     if (!spotifyApi) return;
@@ -100,6 +151,8 @@ function DashboardContent() {
               tracks={playlistTracks}
               artists={playlistArtists}
               onBack={handleBack}
+              isShared={sharedPlaylistIds.has(selectedPlaylist.id)}
+              onShareToggle={() => handleShareToggle(selectedPlaylist)}
             />
           )}
         </AnimatePresence>

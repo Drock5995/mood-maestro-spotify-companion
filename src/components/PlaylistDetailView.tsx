@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { ArrowLeft, Music, Users, Share2 } from 'lucide-react';
+import { ArrowLeft, Music, Users, Share2, CheckCircle } from 'lucide-react';
 import { SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
 
 interface PlaylistDetailViewProps {
@@ -12,6 +12,8 @@ interface PlaylistDetailViewProps {
   tracks: SpotifyTrack[];
   artists: SpotifyArtist[];
   onBack: () => void;
+  isShared: boolean;
+  onShareToggle: () => void;
 }
 
 const formatDuration = (ms: number) => {
@@ -28,7 +30,7 @@ const gradients = [
   ['#EF4444', '#F59E0B'], // red-yellow
 ];
 
-export default function PlaylistDetailView({ playlist, tracks, artists, onBack }: PlaylistDetailViewProps) {
+export default function PlaylistDetailView({ playlist, tracks, artists, onBack, isShared, onShareToggle }: PlaylistDetailViewProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'songs' | 'social'>('overview');
 
   const analysis = useMemo(() => {
@@ -158,6 +160,17 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack }
           <p className="text-sm font-bold text-purple-400 uppercase tracking-widest">Playlist</p>
           <h1 className="text-5xl md:text-7xl font-extrabold mt-2 mb-4">{playlist.name}</h1>
           <p className="text-gray-400 max-w-prose">{playlist.description || 'A collection of amazing tracks.'}</p>
+          <button
+            onClick={onShareToggle}
+            className={`mt-4 flex items-center space-x-2 px-4 py-2 rounded-full font-semibold transition-all duration-300 ${
+              isShared
+                ? 'bg-emerald-500 text-white'
+                : 'bg-white/10 hover:bg-white/20 text-white'
+            }`}
+          >
+            {isShared ? <CheckCircle size={20} /> : <Share2 size={20} />}
+            <span>{isShared ? 'Shared to Community' : 'Share to Community'}</span>
+          </button>
         </div>
       </header>
 

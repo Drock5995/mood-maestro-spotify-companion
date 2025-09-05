@@ -77,7 +77,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
     }
   }, [spotifyApi, session, router]);
 
-  const contextValue = { spotifyApi, user, playlists, loading, error };
+  const contextValue = { spotifyApi, user, playlists, loading, error, session };
   const playlistId = searchParams.get('playlist_id');
 
   if (loading && !user) {
