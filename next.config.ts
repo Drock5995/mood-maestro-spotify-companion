@@ -24,7 +24,7 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'mosaic.scdn.co',
-        port: '',
+        port: '/**',
         pathname: '/**',
       },
       {
