@@ -39,6 +39,22 @@ export interface SpotifyTrack {
   explicit: boolean; // Added explicit status
 }
 
+export interface SpotifyArtist {
+  id: string;
+  name: string;
+  genres: string[];
+  images: Array<{
+    url: string;
+    height: number;
+    width: number;
+  }>;
+  popularity: number;
+  followers: {
+    total: number;
+  };
+  uri: string;
+}
+
 export interface SpotifyTokenResponse {
   access_token: string;
   token_type: string;
@@ -133,5 +149,14 @@ export class SpotifyAPI {
       popularity: track.popularity || 0, // Default to 0 if not present
       explicit: track.explicit || false, // Default to false if not present
     }));
+  }
+
+  async getUserTopArtists(limit: number = 5): Promise<SpotifyArtist[]> {
+    const response = await this.makeRequest<{
+      items: SpotifyArtist[];
+      next: string | null;
+      total: number;
+    }>(`/me/top/artists?limit=${limit}&time_range=medium_term`); // medium_term for last 6 months
+    return response.items;
   }
 }
