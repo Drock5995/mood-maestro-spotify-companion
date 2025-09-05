@@ -120,7 +120,11 @@ function DashboardContent() {
         }
       } catch (e) {
         console.error("Could not analyze library:", e);
-        // Non-critical error, don't block the UI
+        if (e instanceof Error && e.message.includes('403')) {
+          setError("It looks like the app doesn't have permission to analyze your liked songs. Please log out and log back in to grant the necessary permissions. This is usually a one-time fix!");
+        } else {
+          setError("An unknown error occurred while analyzing your library.");
+        }
       } finally {
         setIsAnalyzingLibrary(false);
       }
@@ -145,7 +149,11 @@ function DashboardContent() {
       setShowMoodModal(true);
     } catch (err) {
       console.error('Error during mood analysis:', err);
-      setError('Failed to analyze playlist mood. Please try again.');
+      if (err instanceof Error && err.message.includes('403')) {
+        setError("It looks like the app doesn't have permission to analyze this playlist. Please log out and log back in to grant the necessary permissions.");
+      } else {
+        setError('Failed to analyze playlist mood. Please try again.');
+      }
     } finally {
       setAnalyzingPlaylistId(null);
     }
@@ -165,7 +173,7 @@ function DashboardContent() {
     try {
       const { playlistName, recommendationOptions } = getPlaylistParametersFromPrompt(prompt);
       setGeneratedPlaylistName(playlistName);
-      const finalOptions: RecommendationOptions = { ...recommendationOptions, limit: 40 };
+      const finalOptions: RecommendationOptions = { ...recommendationsOptions, limit: 40 };
       if (!finalOptions.seed_genres?.length) {
         const likedSongs = await spotify.getLikedSongs();
         if (likedSongs.length > 0) {
@@ -287,6 +295,12 @@ function DashboardContent() {
           </button>
         </header>
 
+        {error && (
+          <div className="bg-red-900/50 border border-red-500/50 text-red-200 p-4 rounded-lg mb-8 text-center">
+            <p>{error}</p>
+          </div>
+        )}
+
         <section className="mb-12">
           <h2 className="text-3xl font-bold text-white mb-4">Your Library DNA 🧬</h2>
           {isAnalyzingLibrary ? (
@@ -365,12 +379,6 @@ function DashboardContent() {
             />
           )}
         </section>
-
-        {error && (
-          <div className="bg-red-900/50 border border-red-500/50 text-red-200 p-4 rounded-lg mb-8 text-center">
-            <p>{error}</p>
-          </div>
-        )}
 
         <section>
           <h2 className="text-3xl font-bold text-white mb-4">Your Playlists</h2>
