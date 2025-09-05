@@ -236,12 +236,10 @@ export class SpotifyAPI {
           throw refreshError;
         }
       }
-      // Handle 403 Forbidden by forcing a logout
+      // Handle 403 Forbidden by throwing an error, not forcing a logout.
       if (response.status === 403) {
-        console.error('[SpotifyAPI] Received 403 Forbidden. Token is likely invalid. Forcing logout.');
-        this.clearTokens();
-        if (typeof window !== 'undefined') { window.location.href = '/'; }
-        throw new Error(`Spotify API error: 403 Forbidden. Your session may be invalid.`);
+        console.error('[SpotifyAPI] Received 403 Forbidden. The token may be invalid or lack permissions for this specific request.');
+        throw new Error(`Spotify API error: 403 Forbidden. Your session may be invalid or lack permissions for this operation.`);
       }
       throw new Error(`Spotify API error: ${response.status} ${response.statusText} - ${errorBody}`);
     }
