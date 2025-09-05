@@ -173,7 +173,7 @@ function DashboardContent() {
     try {
       const { playlistName, recommendationOptions } = getPlaylistParametersFromPrompt(prompt);
       setGeneratedPlaylistName(playlistName);
-      const finalOptions: RecommendationOptions = { ...recommendationsOptions, limit: 40 };
+      const finalOptions: RecommendationOptions = { ...recommendationOptions, limit: 40 };
       if (!finalOptions.seed_genres?.length) {
         const likedSongs = await spotify.getLikedSongs();
         if (likedSongs.length > 0) {
