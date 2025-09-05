@@ -140,7 +140,7 @@ function DashboardContent() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         </div>
       </header>
-      <div className="flex-1 overflow-y-auto pr-2 relative">
+      <div className={`flex-1 pr-2 relative ${selectedPlaylist ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {playlists.map((playlist, index) => (
             <div key={playlist.id} onClick={() => handlePlaylistSelect(playlist)}>
