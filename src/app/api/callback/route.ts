@@ -8,6 +8,7 @@ async function exchangeCodeForToken(code: string, redirectUri: string): Promise<
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
   
   if (!clientId || !clientSecret) {
+    console.error('Spotify client credentials (NEXT_PUBLIC_SPOTIFY_CLIENT_ID or SPOTIFY_CLIENT_SECRET) not configured.');
     throw new Error('Spotify client credentials not configured');
   }
 
@@ -27,7 +28,8 @@ async function exchangeCodeForToken(code: string, redirectUri: string): Promise<
   if (!response.ok) {
     const errorData = await response.json();
     console.error('Spotify token exchange error details:', errorData);
-    throw new Error(`Token exchange failed: ${response.status} ${response.statusText}`);
+    // Throw a more specific error that includes Spotify's error message
+    throw new Error(`Token exchange failed: ${response.status} ${response.statusText}. Spotify error: ${JSON.stringify(errorData)}`);
   }
 
   const tokenData: SpotifyTokenResponse = await response.json();
