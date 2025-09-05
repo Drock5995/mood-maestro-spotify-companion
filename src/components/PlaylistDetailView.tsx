@@ -116,7 +116,7 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack }
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center py-16">
             <h3 className="text-3xl font-bold mb-4">Coming Soon!</h3>
-            <p className="text-gray-400">This is where you'll see likes, comments, and sharing options.</p>
+            <p className="text-gray-400">This is where you&apos;ll see likes, comments, and sharing options.</p>
           </motion.div>
         );
     }
