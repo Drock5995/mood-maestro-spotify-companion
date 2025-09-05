@@ -2,10 +2,11 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Home, Users, Heart, Music, LogOut } from 'lucide-react';
 import { SpotifyPlaylist } from '@/lib/spotify';
 import { useSpotify } from '@/context/SpotifyContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SidebarProps {
   onPlaylistClick: (playlist: SpotifyPlaylist) => void;
@@ -29,13 +30,10 @@ const NavLink = ({ href, icon: Icon, label }: { href: string, icon: React.Elemen
 };
 
 export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: SidebarProps) {
-  const { user, playlists, spotifyApi } = useSpotify();
-  const router = useRouter();
+  const { user, playlists } = useSpotify();
 
-  const handleLogout = () => {
-    if (spotifyApi) spotifyApi.clearTokens();
-    localStorage.clear();
-    router.push('/login');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
   };
 
   return (

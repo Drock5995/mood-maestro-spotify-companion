@@ -3,35 +3,36 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Music } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function LoginPage() {
   const router = useRouter();
 
-  const handleLogin = () => {
-    const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-    const redirectUri = `${window.location.origin}/api/auth/callback`;
-    const scopes = [
-      'user-read-private',
-      'user-read-email',
-      'playlist-read-private',
-      'playlist-read-collaborative',
-      'user-top-read',
-    ].join(' ');
+  const handleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'spotify',
+      options: {
+        scopes: [
+          'user-read-private',
+          'user-read-email',
+          'playlist-read-private',
+          'playlist-read-collaborative',
+          'user-top-read',
+        ].join(' '),
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
 
-    if (!clientId) {
-      console.error('Spotify Client ID is not set. Please check your .env.local file.');
-      alert('Spotify Client ID is not configured.');
-      return;
+    if (error) {
+      console.error('Spotify login error:', error);
+      alert(`Login failed: ${error.message}. Please try again.`);
     }
-
-    const authUrl = `https://accounts.spotify.com/authorize?response_type=code&client_id=${clientId}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=spotify_auth`;
-    window.location.href = authUrl;
   };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const error = params.get('error');
-    const details = params.get('details');
+    const details = params.get('error_description');
 
     if (error) {
       let errorMessage = `Login failed: ${error}.`;
@@ -40,7 +41,7 @@ export default function LoginPage() {
       }
       errorMessage += ` Please try again.`;
       alert(errorMessage);
-      router.replace('/login', undefined);
+      router.replace('/login');
     }
   }, [router]);
 
