@@ -11,7 +11,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'image-cdn-*.spotifycdn.com', // Using wildcard to catch all subdomains
+        hostname: '*.spotifycdn.com', // More general wildcard for Spotify CDN
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.scdn.co', // Another common Spotify domain
         port: '',
         pathname: '/**',
       },

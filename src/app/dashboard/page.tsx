@@ -131,13 +131,19 @@ function DashboardContent() {
           const sortedArtists = Object.entries(artistCounts).sort((a, b) => b[1] - a[1]);
           setTopArtists(sortedArtists.slice(0, 5));
         }
-      } catch (e) {
+      } catch (e: unknown) { // Use unknown for better type safety
         console.error("Could not analyze library:", e);
-        // The makeRequest function will handle the redirect for 403 errors.
-        // We can set a more generic error here for other cases.
-        if (e instanceof Error && !e.message.includes('403')) {
-          setError("An error occurred while analyzing your library's audio DNA. Some features may be unavailable.");
+        let errorMessage = "An unknown error occurred while analyzing your library's audio DNA. Some features may be unavailable.";
+        if (e instanceof Error) {
+          if (e.message.includes('403 Forbidden')) {
+            errorMessage = "Spotify denied access to audio features for your liked songs (403 Forbidden). This might be a temporary issue, or your Spotify session might need to be refreshed. Please try logging out and logging back in.";
+          } else if (e.message.includes('No access token available')) {
+            errorMessage = "Your Spotify session has expired. Please log out and log back in.";
+          } else {
+            errorMessage = `Error analyzing library: ${e.message}. Some features may be unavailable.`;
+          }
         }
+        setError(errorMessage);
       } finally {
         setIsAnalyzingLibrary(false);
       }
