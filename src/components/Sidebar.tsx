@@ -2,13 +2,12 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Home, Users, Heart, Music } from 'lucide-react';
-import { SpotifyUser, SpotifyPlaylist } from '@/lib/spotify';
+import { usePathname, useRouter } from 'next/navigation';
+import { Home, Users, Heart, Music, LogOut } from 'lucide-react';
+import { SpotifyPlaylist } from '@/lib/spotify';
+import { useSpotify } from '@/context/SpotifyContext';
 
 interface SidebarProps {
-  user: SpotifyUser | null;
-  playlists: SpotifyPlaylist[];
   onPlaylistClick: (playlist: SpotifyPlaylist) => void;
   selectedPlaylistId?: string | null;
 }
@@ -18,18 +17,29 @@ const NavLink = ({ href, icon: Icon, label }: { href: string, icon: React.Elemen
   const isActive = pathname === href;
 
   return (
-    <Link href={href} className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-200 ${
-      isActive ? 'bg-white/20 text-white' : 'text-gray-300 hover:bg-white/10 hover:text-white'
+    <Link href={href} className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${
+      isActive 
+        ? 'bg-purple-600/30 text-white font-semibold shadow-lg' 
+        : 'text-gray-400 hover:bg-white/10 hover:text-white'
     }`}>
-      <Icon className="w-5 h-5" />
-      <span className="font-medium">{label}</span>
+      <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-purple-300' : 'text-gray-500 group-hover:text-white'}`} />
+      <span className="truncate">{label}</span>
     </Link>
   );
 };
 
-export default function Sidebar({ user, playlists, onPlaylistClick, selectedPlaylistId }: SidebarProps) {
+export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: SidebarProps) {
+  const { user, playlists, spotifyApi } = useSpotify();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    if (spotifyApi) spotifyApi.clearTokens();
+    localStorage.clear();
+    router.push('/login');
+  };
+
   return (
-    <aside className="w-64 bg-black/30 p-4 flex flex-col space-y-6 rounded-2xl">
+    <aside className="w-72 bg-black/30 backdrop-blur-lg p-4 flex flex-col space-y-6 rounded-2xl border border-white/10">
       {user && (
         <div className="flex items-center space-x-4 p-2">
           {user.images?.[0]?.url && (
@@ -49,32 +59,40 @@ export default function Sidebar({ user, playlists, onPlaylistClick, selectedPlay
       )}
 
       <nav className="flex flex-col space-y-2">
-        <NavLink href="/dashboard" icon={Home} label="Home" />
+        <NavLink href="/dashboard" icon={Home} label="Dashboard" />
         <NavLink href="/community" icon={Users} label="Community" />
-        <NavLink href="/friends" icon={Heart} label="Friends" />
+        <NavLink href="/friends" icon={Heart} label="Matchmaker" />
       </nav>
 
-      <div className="border-t border-white/10"></div>
-
-      <div className="flex-grow overflow-y-auto pr-2">
+      <div className="border-t border-white/10 flex-grow overflow-y-auto pt-4 pr-1 -mr-2">
         <h4 className="text-gray-400 font-semibold text-sm uppercase tracking-wider px-3 mb-3">Your Playlists</h4>
         <ul className="space-y-1">
           {playlists.map((playlist) => (
             <li key={playlist.id}>
               <button
                 onClick={() => onPlaylistClick(playlist)}
-                className={`w-full text-left flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-200 ${
+                className={`w-full text-left flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 group ${
                   selectedPlaylistId === playlist.id
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-500 text-white font-semibold shadow-lg'
-                    : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                    ? 'bg-purple-600/30 text-white font-semibold'
+                    : 'text-gray-400 hover:bg-white/10 hover:text-white'
                 }`}
               >
-                <Music className="w-5 h-5 flex-shrink-0" />
+                <Music className={`w-5 h-5 flex-shrink-0 transition-colors ${selectedPlaylistId === playlist.id ? 'text-purple-300' : 'text-gray-500 group-hover:text-white'}`} />
                 <span className="truncate">{playlist.name}</span>
               </button>
             </li>
           ))}
         </ul>
+      </div>
+      
+      <div className="border-t border-white/10 pt-4">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-400 hover:bg-red-500/20 hover:text-red-300 transition-colors duration-200 group"
+        >
+          <LogOut className="w-5 h-5 text-gray-500 group-hover:text-red-300 transition-colors" />
+          <span className="font-medium">Logout</span>
+        </button>
       </div>
     </aside>
   );

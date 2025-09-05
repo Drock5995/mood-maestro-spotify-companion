@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
+import { Search } from 'lucide-react';
 import { SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
 import { useSpotify } from '@/context/SpotifyContext';
 import PlaylistCard from '@/components/PlaylistCard';
@@ -53,12 +54,6 @@ function DashboardContent() {
     }
   }, [searchParams, playlists, selectedPlaylist, handlePlaylistSelect]);
 
-  const handleLogout = () => {
-    if (spotifyApi) spotifyApi.clearTokens();
-    localStorage.clear();
-    router.push('/login');
-  };
-
   const handleBack = () => {
     setSelectedPlaylist(null);
     router.push('/dashboard', { scroll: false });
@@ -74,13 +69,21 @@ function DashboardContent() {
 
   return (
     <>
-      <header className="flex justify-between items-center mb-6 px-2">
-        <h1 className="text-4xl font-extrabold text-white">
-          Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">Playlists</span>
-        </h1>
-        <button onClick={handleLogout} className="bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-5 rounded-full transition duration-300 ease-in-out">
-          Logout
-        </button>
+      <header className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-4xl font-extrabold text-white">
+            Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">Playlists</span>
+          </h1>
+          <p className="text-gray-400 mt-1">A collection of your saved and created playlists on Spotify.</p>
+        </div>
+        <div className="relative">
+          <input 
+            type="text" 
+            placeholder="Search playlists..."
+            className="bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all w-64"
+          />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        </div>
       </header>
       <div className="flex-1 overflow-y-auto pr-2 relative">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">

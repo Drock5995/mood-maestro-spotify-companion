@@ -67,6 +67,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   }, [spotifyApi, router]);
 
   const contextValue = { spotifyApi, user, playlists, loading, error };
+  const playlistId = searchParams.get('playlist_id');
 
   if (loading) {
     return (
@@ -91,13 +92,12 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
 
   return (
     <SpotifyContext.Provider value={contextValue}>
-      <div className="flex h-screen p-4 gap-4">
+      <div className="flex h-screen p-4 gap-4 bg-black/20">
         <Sidebar 
-          user={user} 
-          playlists={playlists} 
           onPlaylistClick={(p) => router.push(`/dashboard?playlist_id=${p.id}`)}
+          selectedPlaylistId={playlistId}
         />
-        <main className="flex-1 flex flex-col relative overflow-hidden">
+        <main className="flex-1 flex flex-col relative overflow-hidden bg-black/30 backdrop-blur-lg rounded-2xl border border-white/10 p-6">
           {children}
         </main>
       </div>
