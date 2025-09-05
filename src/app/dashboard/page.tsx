@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, SpotifyTrack } from '@/lib/spotify';
+import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
 
 // Component to handle the actual dashboard content, wrapped in Suspense
 function DashboardContent() {
@@ -12,6 +12,7 @@ function DashboardContent() {
   const [spotifyApi, setSpotifyApi] = useState<SpotifyAPI | null>(null);
   const [user, setUser] = useState<SpotifyUser | null>(null);
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
+  const [topArtists, setTopArtists] = useState<SpotifyArtist[]>([]); // New state for top artists
   const [selectedPlaylist, setSelectedPlaylist] = useState<SpotifyPlaylist | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +58,8 @@ function DashboardContent() {
           setUser(currentUser);
           const userPlaylists = await spotifyApi.getUserPlaylists();
           setPlaylists(userPlaylists);
+          const userTopArtists = await spotifyApi.getUserTopArtists(10); // Fetch top 10 artists
+          setTopArtists(userTopArtists);
         } catch (err) {
           console.error('Failed to fetch Spotify data:', err);
           setError(err instanceof Error ? err.message : 'An unknown error occurred.');
@@ -136,21 +139,21 @@ function DashboardContent() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-green-900 to-black text-white">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-green-950 to-black text-white">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500"></div>
-        <p className="mt-4 text-lg">Loading your Spotify data...</p>
+        <p className="mt-4 text-lg text-green-300">Loading your Spotify data...</p>
       </div>
     );
   }
 
   if (error && !analysisLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-red-900 to-black text-white">
-        <h1 className="text-3xl font-bold mb-4">Error</h1>
-        <p className="text-lg mb-6">{error}</p>
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-red-950 to-black text-white">
+        <h1 className="text-3xl font-bold mb-4 text-red-400">Error</h1>
+        <p className="text-lg mb-6 text-red-300">{error}</p>
         <button
           onClick={() => router.push('/login')}
-          className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-full transition duration-300 ease-in-out"
+          className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full transition duration-300 ease-in-out"
         >
           Try Logging In Again
         </button>
@@ -159,9 +162,9 @@ function DashboardContent() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-green-900 to-black text-white p-6 sm:p-8 md:p-10">
+    <main className="min-h-screen bg-gradient-to-br from-green-950 to-black text-white p-6 sm:p-8 md:p-10">
       <div className="max-w-7xl mx-auto">
-        <header className="flex flex-col sm:flex-row justify-between items-center mb-8 pb-4 border-b border-gray-700">
+        <header className="flex flex-col sm:flex-row justify-between items-center mb-10 pb-4 border-b border-gray-700">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-green-400 mb-4 sm:mb-0">
             Dashboard 🎨
           </h1>
@@ -174,7 +177,7 @@ function DashboardContent() {
         </header>
 
         {user && (
-          <section className="mb-10 bg-gray-800 bg-opacity-70 p-6 rounded-xl shadow-lg flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
+          <section className="mb-12 bg-gray-900 bg-opacity-70 p-6 rounded-xl shadow-lg flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 border border-green-800">
             {user.images && user.images.length > 0 && (
               <Image
                 src={user.images[0].url}
@@ -191,7 +194,35 @@ function DashboardContent() {
           </section>
         )}
 
-        <section className="mb-10">
+        <section className="mb-12">
+          <h2 className="text-3xl font-bold mb-6 text-green-300">Your Top Artists 🎤</h2>
+          {topArtists.length === 0 ? (
+            <p className="text-gray-400 text-lg">No top artists found. Listen to more music on Spotify to see them here!</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+              {topArtists.map((artist) => (
+                <div 
+                  key={artist.id} 
+                  className="bg-gray-800 bg-opacity-70 p-4 rounded-xl shadow-md hover:shadow-xl hover:bg-gray-700 transition-all duration-300 cursor-pointer border border-transparent"
+                >
+                  {artist.images && artist.images.length > 0 && (
+                    <Image
+                      src={artist.images[0].url}
+                      alt={artist.name}
+                      width={250}
+                      height={250}
+                      className="w-full h-48 object-cover rounded-lg mb-3 shadow-sm"
+                    />
+                  )}
+                  <h3 className="text-xl font-semibold text-white mb-1 truncate">{artist.name}</h3>
+                  <p className="text-gray-400 text-sm">{artist.genres.slice(0, 2).join(', ')}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mb-12">
           <h2 className="text-3xl font-bold mb-6 text-green-300">Your Playlists 🎶</h2>
           {playlists.length === 0 ? (
             <p className="text-gray-400 text-lg">No playlists found. Connect to Spotify to see your playlists here!</p>
@@ -226,7 +257,7 @@ function DashboardContent() {
 
         <section>
           <h2 className="text-3xl font-bold mb-6 text-green-300">Playlist Vibe Analysis 📊</h2>
-          <div className="bg-gray-800 bg-opacity-70 p-6 rounded-xl shadow-lg">
+          <div className="bg-gray-900 bg-opacity-70 p-6 rounded-xl shadow-lg border border-green-800">
             {analysisLoading ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500"></div>
@@ -238,19 +269,19 @@ function DashboardContent() {
                 <p className="text-lg text-gray-200 mb-8 leading-relaxed">{analysisData.moodDescription}</p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg border border-gray-600">
+                  <div className="bg-gray-800 bg-opacity-50 p-4 rounded-lg border border-gray-700">
                     <p className="text-gray-300 text-sm">Total Tracks</p>
                     <p className="text-white text-2xl font-bold mt-1">{analysisData.totalTracks}</p>
                   </div>
-                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg border border-gray-600">
+                  <div className="bg-gray-800 bg-opacity-50 p-4 rounded-lg border border-gray-700">
                     <p className="text-gray-300 text-sm">Unique Artists</p>
                     <p className="text-white text-2xl font-bold mt-1">{analysisData.uniqueArtists}</p>
                   </div>
-                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg border border-gray-600">
+                  <div className="bg-gray-800 bg-opacity-50 p-4 rounded-lg border border-gray-700">
                     <p className="text-gray-300 text-sm">Explicit Content</p>
                     <p className="text-white text-2xl font-bold mt-1">{analysisData.explicitPercentage.toFixed(0)}%</p>
                   </div>
-                  <div className="bg-gray-700 bg-opacity-50 p-4 rounded-lg border border-gray-600">
+                  <div className="bg-gray-800 bg-opacity-50 p-4 rounded-lg border border-gray-700">
                     <p className="text-gray-300 text-sm">Average Popularity</p>
                     <p className="text-white text-2xl font-bold mt-1">{analysisData.averagePopularity.toFixed(0)}</p>
                   </div>
@@ -261,7 +292,7 @@ function DashboardContent() {
                   {playlistTracks.length > 0 ? (
                     <ul className="space-y-3">
                       {playlistTracks.map(track => (
-                        <li key={track.id} className="flex items-center space-x-4 bg-gray-700 bg-opacity-50 p-3 rounded-lg hover:bg-gray-600 transition-colors duration-200">
+                        <li key={track.id} className="flex items-center space-x-4 bg-gray-800 bg-opacity-50 p-3 rounded-lg hover:bg-gray-700 transition-colors duration-200 border border-gray-700">
                           {track.album?.images?.[0]?.url && (
                             <Image
                               src={track.album.images[0].url}
@@ -302,9 +333,9 @@ function DashboardContent() {
 export default function DashboardPage() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-green-900 to-black text-white">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-green-950 to-black text-white">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500"></div>
-        <p className="mt-4 text-lg">Preparing dashboard...</p>
+        <p className="mt-4 text-lg text-green-300">Preparing dashboard...</p>
       </div>
     }>
       <DashboardContent />
