@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "New Next.js App",
-  description: "A fresh start!",
+  title: "Playlist Connect",
+  description: "Your Social Spotify Hub",
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="min-h-screen text-white">{children}</body>
     </html>
   );
 }
