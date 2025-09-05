@@ -24,6 +24,36 @@ export interface SpotifyPlaylist {
   public: boolean;
 }
 
+export interface SpotifyTrack {
+  id: string;
+  name: string;
+  artists: Array<{ id: string; name: string }>;
+  album: {
+    id: string;
+    name: string;
+    images: Array<{ url: string; height: number; width: number }>;
+  };
+  uri: string;
+  preview_url: string | null;
+}
+
+export interface SpotifyAudioFeatures {
+  id: string;
+  danceability: number;
+  energy: number;
+  key: number;
+  loudness: number;
+  mode: number;
+  speechiness: number;
+  acousticness: number;
+  instrumentalness: number;
+  liveness: number;
+  valence: number;
+  tempo: number;
+  duration_ms: number;
+  time_signature: number;
+}
+
 export interface SpotifyTokenResponse {
   access_token: string;
   token_type: string;
@@ -33,6 +63,8 @@ export interface SpotifyTokenResponse {
 }
 
 const SPOTIFY_BASE_URL = 'https://api.spotify.com/v1';
+const SUPABASE_PROJECT_ID = 'jykbnnmvjpwmoxxhijgn'; // Your Supabase Project ID
+const GET_AUDIO_FEATURES_EDGE_FUNCTION_URL = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/get-audio-features`;
 
 export class SpotifyAPI {
   private accessToken: string | null = null;
@@ -77,9 +109,7 @@ export class SpotifyAPI {
 
     if (!response.ok) {
       if (response.status === 401) {
-        // Token expired, clear tokens and redirect to login
         this.clearTokens();
-        // In a real app, you'd likely want to trigger a redirect to the login page here
         throw new Error('Token expired');
       }
       throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
@@ -100,5 +130,38 @@ export class SpotifyAPI {
     }>('/me/playlists?limit=50');
     
     return response.items;
+  }
+
+  async getPlaylistTracks(playlistId: string): Promise<SpotifyTrack[]> {
+    const response = await this.makeRequest<{
+      items: Array<{ track: SpotifyTrack }>;
+      next: string | null;
+      total: number;
+    }>(`/playlists/${playlistId}/tracks?limit=100`); // Fetch up to 100 tracks
+    
+    return response.items.map(item => item.track).filter(track => track !== null); // Filter out null tracks
+  }
+
+  async getAudioFeaturesForTracks(trackIds: string[]): Promise<SpotifyAudioFeatures[]> {
+    if (!this.accessToken) {
+      throw new Error('No Spotify access token available to fetch audio features.');
+    }
+
+    const response = await fetch(GET_AUDIO_FEATURES_EDGE_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.accessToken}`, // Pass Spotify token to Edge Function
+      },
+      body: JSON.stringify({ trackIds }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error invoking Edge Function for audio features:', errorData);
+      throw new Error(`Failed to get audio features: ${response.statusText}. Details: ${JSON.stringify(errorData)}`);
+    }
+
+    return response.json();
   }
 }

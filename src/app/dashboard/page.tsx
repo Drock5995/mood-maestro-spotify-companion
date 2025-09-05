@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { SpotifyAPI, SpotifyUser, SpotifyPlaylist } from '@/lib/spotify';
+import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, SpotifyTrack, SpotifyAudioFeatures } from '@/lib/spotify';
 
 // Component to handle the actual dashboard content, wrapped in Suspense
 function DashboardContent() {
@@ -12,7 +12,11 @@ function DashboardContent() {
   const [spotifyApi, setSpotifyApi] = useState<SpotifyAPI | null>(null);
   const [user, setUser] = useState<SpotifyUser | null>(null);
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
+  const [selectedPlaylist, setSelectedPlaylist] = useState<SpotifyPlaylist | null>(null);
+  const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
+  const [audioFeatures, setAudioFeatures] = useState<SpotifyAudioFeatures[]>([]);
   const [loading, setLoading] = useState(true);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,19 +26,16 @@ function DashboardContent() {
     const grantedScopes = searchParams.get('granted_scopes');
 
     if (accessToken && refreshToken && expiresIn) {
-      // Store tokens in localStorage for client-side persistence
       localStorage.setItem('spotify_access_token', accessToken);
       localStorage.setItem('spotify_refresh_token', refreshToken);
       localStorage.setItem('spotify_token_expires_at', (Date.now() + parseInt(expiresIn) * 1000).toString());
       localStorage.setItem('spotify_granted_scopes', grantedScopes || '');
 
-      // Clear tokens from URL for cleaner UX and security
       router.replace('/dashboard', undefined);
 
       const api = new SpotifyAPI(accessToken);
       setSpotifyApi(api);
     } else {
-      // Try to load from localStorage if not in URL
       const storedAccessToken = localStorage.getItem('spotify_access_token');
       const storedRefreshToken = localStorage.getItem('spotify_refresh_token');
       const storedExpiresAt = localStorage.getItem('spotify_token_expires_at');
@@ -43,7 +44,6 @@ function DashboardContent() {
         const api = new SpotifyAPI(storedAccessToken);
         setSpotifyApi(api);
       } else {
-        // No valid tokens, redirect to login
         router.push('/login');
         return;
       }
@@ -61,7 +61,6 @@ function DashboardContent() {
         } catch (err) {
           console.error('Failed to fetch Spotify data:', err);
           setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-          // If token expired, redirect to login
           if (err instanceof Error && err.message === 'Token expired') {
             router.push('/login');
           }
@@ -73,13 +72,69 @@ function DashboardContent() {
     fetchData();
   }, [spotifyApi, router]);
 
+  const fetchPlaylistDetails = async (playlist: SpotifyPlaylist) => {
+    if (!spotifyApi) return;
+    setSelectedPlaylist(playlist);
+    setAnalysisLoading(true);
+    setPlaylistTracks([]);
+    setAudioFeatures([]);
+    setError(null);
+
+    try {
+      const tracks = await spotifyApi.getPlaylistTracks(playlist.id);
+      setPlaylistTracks(tracks);
+
+      const trackIds = tracks.map(track => track.id).filter(id => id !== null);
+      if (trackIds.length > 0) {
+        const features = await spotifyApi.getAudioFeaturesForTracks(trackIds);
+        setAudioFeatures(features.filter(f => f !== null)); // Filter out any null features
+      }
+    } catch (err) {
+      console.error('Failed to fetch playlist details or audio features:', err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred while fetching playlist details.');
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
   const handleLogout = () => {
     if (spotifyApi) {
       spotifyApi.clearTokens();
     }
-    localStorage.clear(); // Clear all Spotify related items
+    localStorage.clear();
     router.push('/login');
   };
+
+  const averageFeatures = useMemo(() => {
+    if (audioFeatures.length === 0) return null;
+
+    const sum = audioFeatures.reduce((acc, features) => {
+      acc.danceability += features.danceability;
+      acc.energy += features.energy;
+      acc.valence += features.valence;
+      acc.acousticness += features.acousticness;
+      acc.instrumentalness += features.instrumentalness;
+      acc.liveness += features.liveness;
+      acc.speechiness += features.speechiness;
+      acc.tempo += features.tempo;
+      return acc;
+    }, {
+      danceability: 0, energy: 0, valence: 0, acousticness: 0,
+      instrumentalness: 0, liveness: 0, speechiness: 0, tempo: 0
+    });
+
+    const count = audioFeatures.length;
+    return {
+      danceability: (sum.danceability / count).toFixed(2),
+      energy: (sum.energy / count).toFixed(2),
+      valence: (sum.valence / count).toFixed(2),
+      acousticness: (sum.acousticness / count).toFixed(2),
+      instrumentalness: (sum.instrumentalness / count).toFixed(2),
+      liveness: (sum.liveness / count).toFixed(2),
+      speechiness: (sum.speechiness / count).toFixed(2),
+      tempo: (sum.tempo / count).toFixed(2),
+    };
+  }, [audioFeatures]);
 
   if (loading) {
     return (
@@ -90,7 +145,7 @@ function DashboardContent() {
     );
   }
 
-  if (error) {
+  if (error && !analysisLoading) { // Only show general error if not specifically loading analysis
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-red-900 to-black text-white">
         <h1 className="text-3xl font-bold mb-4">Error</h1>
@@ -145,7 +200,12 @@ function DashboardContent() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {playlists.map((playlist) => (
-                <div key={playlist.id} className="bg-gray-800 bg-opacity-70 p-4 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
+                <div 
+                  key={playlist.id} 
+                  className={`bg-gray-800 bg-opacity-70 p-4 rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer 
+                              ${selectedPlaylist?.id === playlist.id ? 'border-2 border-green-500' : ''}`}
+                  onClick={() => fetchPlaylistDetails(playlist)}
+                >
                   {playlist.images && playlist.images.length > 0 && (
                     <Image
                       src={playlist.images[0].url}
@@ -167,12 +227,61 @@ function DashboardContent() {
         </section>
 
         <section>
-          <h2 className="text-3xl font-bold mb-4 text-green-300">Music Analysis (Coming Soon!) 📊</h2>
+          <h2 className="text-3xl font-bold mb-4 text-green-300">Music Analysis 📊</h2>
           <div className="bg-gray-800 bg-opacity-70 p-6 rounded-lg shadow-lg">
-            <p className="text-gray-300">
-              This section will feature detailed analysis of your music, moods, and more!
-              Stay tuned for exciting insights.
-            </p>
+            {analysisLoading ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-green-500"></div>
+                <p className="mt-4 text-lg">Analyzing {selectedPlaylist?.name || 'playlist'}...</p>
+              </div>
+            ) : selectedPlaylist && averageFeatures ? (
+              <div>
+                <h3 className="text-2xl font-semibold mb-4 text-green-400">Analysis for &quot;{selectedPlaylist.name}&quot;</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-lg">
+                  <p><span className="font-medium text-green-300">Danceability:</span> {averageFeatures.danceability}</p>
+                  <p><span className="font-medium text-green-300">Energy:</span> {averageFeatures.energy}</p>
+                  <p><span className="font-medium text-green-300">Valence (Positivity):</span> {averageFeatures.valence}</p>
+                  <p><span className="font-medium text-green-300">Acousticness:</span> {averageFeatures.acousticness}</p>
+                  <p><span className="font-medium text-green-300">Instrumentalness:</span> {averageFeatures.instrumentalness}</p>
+                  <p><span className="font-medium text-green-300">Liveness:</span> {averageFeatures.liveness}</p>
+                  <p><span className="font-medium text-green-300">Speechiness:</span> {averageFeatures.speechiness}</p>
+                  <p><span className="font-medium text-green-300">Average Tempo:</span> {averageFeatures.tempo} BPM</p>
+                </div>
+                <h4 className="text-xl font-semibold mt-6 mb-3 text-green-400">Tracks in &quot;{selectedPlaylist.name}&quot; ({playlistTracks.length})</h4>
+                <div className="max-h-60 overflow-y-auto pr-2">
+                  {playlistTracks.length > 0 ? (
+                    <ul className="space-y-2">
+                      {playlistTracks.map(track => (
+                        <li key={track.id} className="flex items-center space-x-3 bg-gray-700 bg-opacity-50 p-2 rounded-md">
+                          {track.album?.images?.[0]?.url && (
+                            <Image
+                              src={track.album.images[0].url}
+                              alt={track.album.name}
+                              width={40}
+                              height={40}
+                              className="rounded-sm"
+                            />
+                          )}
+                          <div>
+                            <p className="text-white font-medium">{track.name}</p>
+                            <p className="text-gray-400 text-sm">{track.artists.map(artist => artist.name).join(', ')}</p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-400">No tracks found for this playlist.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-300">
+                Select a playlist above to see its music analysis!
+              </p>
+            )}
+            {error && analysisLoading && ( // Show analysis-specific error
+              <p className="text-red-400 mt-4">Error during analysis: {error}</p>
+            )}
           </div>
         </section>
       </div>
