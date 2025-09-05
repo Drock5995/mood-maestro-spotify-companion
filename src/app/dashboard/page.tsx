@@ -454,7 +454,7 @@ function DashboardContent() {
             <div className="text-center py-12">
               <h3 className="text-xl font-semibold text-white mb-2">No playlists found</h3>
               <p className="text-gray-300">
-                Create some playlists in Spotify and they'll appear here!
+                Create some playlists in Spotify and they&apos;ll appear here!
               </p>
             </div>
           )}

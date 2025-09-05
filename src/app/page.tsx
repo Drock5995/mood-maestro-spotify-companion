@@ -83,7 +83,7 @@ export default function Home() {
           
           <p className="text-sm text-gray-400">
             We&apos;ll only access your playlists and profile info. 
-            Your music taste secrets are safe with us. 🤐
+            Your music taste secrets are safe with us. 🤐 
           </p>
         </div>
       </div>
