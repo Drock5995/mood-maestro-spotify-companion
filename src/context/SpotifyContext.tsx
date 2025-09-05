@@ -1,0 +1,22 @@
+"use client";
+
+import { createContext, useContext } from 'react';
+import { SpotifyAPI, SpotifyUser, SpotifyPlaylist } from '@/lib/spotify';
+
+export interface SpotifyContextType {
+  spotifyApi: SpotifyAPI | null;
+  user: SpotifyUser | null;
+  playlists: SpotifyPlaylist[];
+  loading: boolean;
+  error: string | null;
+}
+
+export const SpotifyContext = createContext<SpotifyContextType | undefined>(undefined);
+
+export const useSpotify = () => {
+  const context = useContext(SpotifyContext);
+  if (context === undefined) {
+    throw new Error('useSpotify must be used within a SpotifyProvider');
+  }
+  return context;
+};

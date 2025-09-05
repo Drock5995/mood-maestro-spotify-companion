@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
+import { SpotifyAPI, SpotifyUser, SpotifyPlaylist } from '@/lib/spotify';
 import Sidebar from '@/components/Sidebar';
+import { SpotifyContext } from '@/context/SpotifyContext';
 
-// This component wraps our main pages (Dashboard, Community, etc.)
-// It handles the core Spotify authentication and data fetching logic
-// so that the pages themselves can focus on their specific content.
-
-function MainLayoutContent({ children }: { children: React.ReactNode }) {
+function MainLayoutContent({ children }: { children: ReactNode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [spotifyApi, setSpotifyApi] = useState<SpotifyAPI | null>(null);
@@ -17,9 +14,6 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // State for detail view, passed down through context or props if needed
-  const [selectedPlaylist, setSelectedPlaylist] = useState<SpotifyPlaylist | null>(null);
 
   useEffect(() => {
     const accessToken = searchParams.get('access_token');
@@ -30,7 +24,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
       localStorage.setItem('spotify_access_token', accessToken);
       localStorage.setItem('spotify_refresh_token', refreshToken);
       localStorage.setItem('spotify_token_expires_at', (Date.now() + parseInt(expiresIn) * 1000).toString());
-      router.replace('/dashboard', undefined); // Redirect to clean URL
+      router.replace('/dashboard', undefined);
       const api = new SpotifyAPI(accessToken);
       setSpotifyApi(api);
     } else {
@@ -40,7 +34,6 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
         const api = new SpotifyAPI(storedAccessToken);
         setSpotifyApi(api);
       } else {
-        // No valid token, redirect to login
         router.push('/login');
       }
     }
@@ -50,6 +43,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
     const fetchData = async () => {
       if (spotifyApi) {
         setLoading(true);
+        setError(null);
         try {
           const [currentUser, userPlaylists] = await Promise.all([
             spotifyApi.getCurrentUser(),
@@ -61,6 +55,7 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
           console.error('Failed to fetch Spotify data:', err);
           setError(err instanceof Error ? err.message : 'An unknown error occurred.');
           if (err instanceof Error && err.message === 'Token expired') {
+            spotifyApi.clearTokens();
             router.push('/login');
           }
         } finally {
@@ -70,6 +65,8 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
     };
     fetchData();
   }, [spotifyApi, router]);
+
+  const contextValue = { spotifyApi, user, playlists, loading, error };
 
   if (loading) {
     return (
@@ -93,29 +90,22 @@ function MainLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen p-4 gap-4">
-      <Sidebar 
-        user={user} 
-        playlists={playlists} 
-        onPlaylistClick={(p) => {
-          // This logic will now be handled by the dashboard page itself
-          // For now, we can navigate or handle state here
-          router.push(`/dashboard?playlist=${p.id}`);
-        }}
-        selectedPlaylistId={selectedPlaylist?.id}
-      />
-      <main className="flex-1 flex flex-col relative overflow-hidden">
-        {/* Pass spotifyApi and user data to children pages */}
-        {children && (children as any).type && (
-          children
-        )}
-      </main>
-    </div>
+    <SpotifyContext.Provider value={contextValue}>
+      <div className="flex h-screen p-4 gap-4">
+        <Sidebar 
+          user={user} 
+          playlists={playlists} 
+          onPlaylistClick={(p) => router.push(`/dashboard?playlist_id=${p.id}`)}
+        />
+        <main className="flex-1 flex flex-col relative overflow-hidden">
+          {children}
+        </main>
+      </div>
+    </SpotifyContext.Provider>
   );
 }
 
-
-export default function MainLayout({ children }: { children: React.ReactNode }) {
+export default function MainLayout({ children }: { children: ReactNode }) {
   return (
     <Suspense fallback={
       <div className="flex min-h-screen flex-col items-center justify-center text-white">

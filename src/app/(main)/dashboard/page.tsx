@@ -1,64 +1,30 @@
 "use client";
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
-import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
+import { SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
+import { useSpotify } from '@/context/SpotifyContext';
 import PlaylistCard from '@/components/PlaylistCard';
 import PlaylistDetailView from '@/components/PlaylistDetailView';
 
 function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [spotifyApi, setSpotifyApi] = useState<SpotifyAPI | null>(null);
-  const [user, setUser] = useState<SpotifyUser | null>(null);
-  const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { spotifyApi, playlists, loading } = useSpotify();
 
-  // State for detail view
   const [selectedPlaylist, setSelectedPlaylist] = useState<SpotifyPlaylist | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
   const [playlistArtists, setPlaylistArtists] = useState<SpotifyArtist[]>([]);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-
-  useEffect(() => {
-    // Token handling is now in layout, just initialize API client
-    const storedAccessToken = localStorage.getItem('spotify_access_token');
-    if (storedAccessToken) {
-      const api = new SpotifyAPI(storedAccessToken);
-      setSpotifyApi(api);
-    } else {
-      router.push('/login');
-    }
-  }, [router]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (spotifyApi) {
-        try {
-          const [currentUser, userPlaylists] = await Promise.all([
-            spotifyApi.getCurrentUser(),
-            spotifyApi.getUserPlaylists(),
-          ]);
-          setUser(currentUser);
-          setPlaylists(userPlaylists);
-        } catch (err) {
-          console.error('Failed to fetch Spotify data:', err);
-          setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-    fetchData();
-  }, [spotifyApi]);
+  const [error, setError] = useState<string | null>(null);
 
   const handlePlaylistSelect = async (playlist: SpotifyPlaylist) => {
     if (!spotifyApi) return;
     
     setIsDetailLoading(true);
     setSelectedPlaylist(playlist);
+    router.push(`/dashboard?playlist_id=${playlist.id}`, { scroll: false });
 
     try {
       const tracks = await spotifyApi.getPlaylistTracks(playlist.id);
@@ -79,10 +45,25 @@ function DashboardContent() {
     }
   };
 
+  useEffect(() => {
+    const playlistId = searchParams.get('playlist_id');
+    if (playlistId && playlists.length > 0) {
+      const playlistToSelect = playlists.find(p => p.id === playlistId);
+      if (playlistToSelect && (!selectedPlaylist || selectedPlaylist.id !== playlistId)) {
+        handlePlaylistSelect(playlistToSelect);
+      }
+    }
+  }, [searchParams, playlists, selectedPlaylist]);
+
   const handleLogout = () => {
     if (spotifyApi) spotifyApi.clearTokens();
     localStorage.clear();
     router.push('/login');
+  };
+
+  const handleBack = () => {
+    setSelectedPlaylist(null);
+    router.push('/dashboard', { scroll: false });
   };
 
   if (loading) {
@@ -97,7 +78,7 @@ function DashboardContent() {
     <>
       <header className="flex justify-between items-center mb-6 px-2">
         <h1 className="text-4xl font-extrabold text-white">
-          Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">Playlist Connect</span>
+          Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">Playlists</span>
         </h1>
         <button onClick={handleLogout} className="bg-white/10 hover:bg-white/20 text-white font-bold py-2 px-5 rounded-full transition duration-300 ease-in-out">
           Logout
@@ -112,12 +93,12 @@ function DashboardContent() {
           ))}
         </div>
         <AnimatePresence>
-          {selectedPlaylist && !isDetailLoading && (
+          {selectedPlaylist && (
             <PlaylistDetailView
               playlist={selectedPlaylist}
               tracks={playlistTracks}
               artists={playlistArtists}
-              onBack={() => setSelectedPlaylist(null)}
+              onBack={handleBack}
             />
           )}
         </AnimatePresence>
@@ -132,6 +113,9 @@ function DashboardContent() {
 }
 
 export default function DashboardPage() {
-  // The Suspense boundary is now in the layout
-  return <DashboardContent />;
+  return (
+    <Suspense>
+      <DashboardContent />
+    </Suspense>
+  );
 }
