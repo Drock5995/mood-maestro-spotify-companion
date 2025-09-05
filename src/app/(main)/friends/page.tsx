@@ -3,18 +3,28 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { Heart, Shuffle } from 'lucide-react';
+import { Shuffle } from 'lucide-react';
 import { useSpotify } from '@/context/SpotifyContext';
 import { SpotifyPlaylist } from '@/lib/spotify';
 
+interface MatchedPlaylist {
+  id: string;
+  name: string;
+  owner: string;
+  avatar: string;
+  likes: number;
+  image: string;
+  match: number;
+}
+
 // Mock data for community playlists
-const mockMatches = [
+const mockMatches: MatchedPlaylist[] = [
   { id: '1', name: 'Indie Vibes', owner: 'Alice', avatar: 'https://i.pravatar.cc/40?u=1', likes: 120, image: 'https://i.scdn.co/image/ab67706c0000bebb485cbbefc3593a745845ebb5', match: 92 },
   { id: '2', name: 'Late Night Jazz', owner: 'Bob', avatar: 'https://i.pravatar.cc/40?u=2', likes: 250, image: 'https://i.scdn.co/image/ab67706f00000002bdeb1c37f70041c595908c7c', match: 88 },
   { id: '3', name: 'Hip Hop Classics', owner: 'Charlie', avatar: 'https://i.pravatar.cc/40?u=3', likes: 500, image: 'https://i.scdn.co/image/ab67706c0000bebb9318b45e3e74643a8958248b', match: 85 },
 ];
 
-const MatchCard = ({ playlist, index }: { playlist: any, index: number }) => (
+const MatchCard = ({ playlist, index }: { playlist: MatchedPlaylist, index: number }) => (
   <motion.div
     className="bg-white/5 p-4 rounded-2xl flex flex-col items-center text-center"
     initial={{ opacity: 0, y: 20 }}
@@ -39,7 +49,7 @@ const MatchCard = ({ playlist, index }: { playlist: any, index: number }) => (
 export default function FriendsPage() {
   const { playlists } = useSpotify();
   const [selectedPlaylist, setSelectedPlaylist] = useState<SpotifyPlaylist | null>(null);
-  const [matches, setMatches] = useState<any[]>([]);
+  const [matches, setMatches] = useState<MatchedPlaylist[]>([]);
   const [isMatching, setIsMatching] = useState(false);
 
   const handleFindMatches = () => {

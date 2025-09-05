@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
 import { SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
@@ -17,9 +17,8 @@ function DashboardContent() {
   const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
   const [playlistArtists, setPlaylistArtists] = useState<SpotifyArtist[]>([]);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handlePlaylistSelect = async (playlist: SpotifyPlaylist) => {
+  const handlePlaylistSelect = useCallback(async (playlist: SpotifyPlaylist) => {
     if (!spotifyApi) return;
     
     setIsDetailLoading(true);
@@ -39,11 +38,10 @@ function DashboardContent() {
       }
     } catch (err) {
       console.error('Failed to fetch playlist details:', err);
-      setError('Could not load playlist details.');
     } finally {
       setIsDetailLoading(false);
     }
-  };
+  }, [spotifyApi, router]);
 
   useEffect(() => {
     const playlistId = searchParams.get('playlist_id');
@@ -53,7 +51,7 @@ function DashboardContent() {
         handlePlaylistSelect(playlistToSelect);
       }
     }
-  }, [searchParams, playlists, selectedPlaylist]);
+  }, [searchParams, playlists, selectedPlaylist, handlePlaylistSelect]);
 
   const handleLogout = () => {
     if (spotifyApi) spotifyApi.clearTokens();

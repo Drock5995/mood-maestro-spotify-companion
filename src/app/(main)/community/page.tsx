@@ -5,8 +5,17 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Heart } from 'lucide-react';
 
+interface CommunityPlaylist {
+  id: string;
+  name: string;
+  owner: string;
+  avatar: string;
+  likes: number;
+  image: string;
+}
+
 // Mock data for community playlists
-const mockPlaylists = [
+const mockPlaylists: CommunityPlaylist[] = [
   { id: '1', name: 'Indie Vibes', owner: 'Alice', avatar: 'https://i.pravatar.cc/40?u=1', likes: 120, image: 'https://i.scdn.co/image/ab67706c0000bebb485cbbefc3593a745845ebb5' },
   { id: '2', name: 'Late Night Jazz', owner: 'Bob', avatar: 'https://i.pravatar.cc/40?u=2', likes: 250, image: 'https://i.scdn.co/image/ab67706f00000002bdeb1c37f70041c595908c7c' },
   { id: '3', name: 'Hip Hop Classics', owner: 'Charlie', avatar: 'https://i.pravatar.cc/40?u=3', likes: 500, image: 'https://i.scdn.co/image/ab67706c0000bebb9318b45e3e74643a8958248b' },
@@ -15,7 +24,7 @@ const mockPlaylists = [
   { id: '6', name: '80s Flashback', owner: 'Frank', avatar: 'https://i.pravatar.cc/40?u=6', likes: 420, image: 'https://i.scdn.co/image/ab67706f00000002b54d5b6313b1b52509bee212' },
 ];
 
-const CommunityPlaylistCard = ({ playlist, index }: { playlist: any, index: number }) => (
+const CommunityPlaylistCard = ({ playlist, index }: { playlist: CommunityPlaylist, index: number }) => (
   <motion.div
     className="relative rounded-2xl overflow-hidden group cursor-pointer"
     initial={{ opacity: 0, y: 20 }}
@@ -39,7 +48,7 @@ const CommunityPlaylistCard = ({ playlist, index }: { playlist: any, index: numb
 );
 
 export default function CommunityPage() {
-  const [playlists, setPlaylists] = useState(mockPlaylists);
+  const [playlists] = useState(mockPlaylists);
 
   return (
     <>
