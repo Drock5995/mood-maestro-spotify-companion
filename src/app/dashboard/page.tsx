@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, SpotifyTrack, SpotifyAudioFeatures } from '@/lib/spotify';
+import { SpotifyAPI, SpotifyUser, SpotifyPlaylist, SpotifyTrack } from '@/lib/spotify';
 
 // Component to handle the actual dashboard content, wrapped in Suspense
 function DashboardContent() {
@@ -14,7 +14,6 @@ function DashboardContent() {
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState<SpotifyPlaylist | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
-  const [audioFeatures, setAudioFeatures] = useState<SpotifyAudioFeatures[]>([]);
   const [loading, setLoading] = useState(true);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,20 +76,13 @@ function DashboardContent() {
     setSelectedPlaylist(playlist);
     setAnalysisLoading(true);
     setPlaylistTracks([]);
-    setAudioFeatures([]);
     setError(null);
 
     try {
       const tracks = await spotifyApi.getPlaylistTracks(playlist.id);
       setPlaylistTracks(tracks);
-
-      const trackIds = tracks.map(track => track.id).filter(id => id !== null);
-      if (trackIds.length > 0) {
-        const features = await spotifyApi.getAudioFeaturesForTracks(trackIds);
-        setAudioFeatures(features.filter(f => f !== null)); // Filter out any null features
-      }
     } catch (err) {
-      console.error('Failed to fetch playlist details or audio features:', err);
+      console.error('Failed to fetch playlist details:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred while fetching playlist details.');
     } finally {
       setAnalysisLoading(false);
@@ -105,36 +97,31 @@ function DashboardContent() {
     router.push('/login');
   };
 
-  const averageFeatures = useMemo(() => {
-    if (audioFeatures.length === 0) return null;
+  const moodSummary = useMemo(() => {
+    if (playlistTracks.length === 0) return null;
 
-    const sum = audioFeatures.reduce((acc, features) => {
-      acc.danceability += features.danceability;
-      acc.energy += features.energy;
-      acc.valence += features.valence;
-      acc.acousticness += features.acousticness;
-      acc.instrumentalness += features.instrumentalness;
-      acc.liveness += features.liveness;
-      acc.speechiness += features.speechiness;
-      acc.tempo += features.tempo;
-      return acc;
-    }, {
-      danceability: 0, energy: 0, valence: 0, acousticness: 0,
-      instrumentalness: 0, liveness: 0, speechiness: 0, tempo: 0
-    });
+    const totalTracks = playlistTracks.length;
+    const explicitTracks = playlistTracks.filter(track => track.explicit).length;
+    const averagePopularity = playlistTracks.reduce((sum, track) => sum + track.popularity, 0) / totalTracks;
 
-    const count = audioFeatures.length;
-    return {
-      danceability: (sum.danceability / count).toFixed(2),
-      energy: (sum.energy / count).toFixed(2),
-      valence: (sum.valence / count).toFixed(2),
-      acousticness: (sum.acousticness / count).toFixed(2),
-      instrumentalness: (sum.instrumentalness / count).toFixed(2),
-      liveness: (sum.liveness / count).toFixed(2),
-      speechiness: (sum.speechiness / count).toFixed(2),
-      tempo: (sum.tempo / count).toFixed(2),
-    };
-  }, [audioFeatures]);
+    let moodDescription = `This playlist contains ${totalTracks} tracks. `;
+
+    if (explicitTracks > 0) {
+      moodDescription += `About ${Math.round((explicitTracks / totalTracks) * 100)}% of the tracks contain explicit content, suggesting a more mature or edgy vibe. `;
+    } else {
+      moodDescription += `It appears to be free of explicit content, indicating a generally clean listening experience. `;
+    }
+
+    if (averagePopularity > 70) {
+      moodDescription += `With an average popularity score of ${averagePopularity.toFixed(0)}, it features many well-known and trending songs, likely making it energetic and widely appealing.`;
+    } else if (averagePopularity > 40) {
+      moodDescription += `With an average popularity score of ${averagePopularity.toFixed(0)}, it includes a good mix of popular and lesser-known tracks, offering a balanced listening experience.`;
+    } else {
+      moodDescription += `With an average popularity score of ${averagePopularity.toFixed(0)}, it leans towards more niche or discovery-oriented tracks, potentially offering a unique and reflective mood.`;
+    }
+
+    return moodDescription;
+  }, [playlistTracks]);
 
   if (loading) {
     return (
@@ -145,7 +132,7 @@ function DashboardContent() {
     );
   }
 
-  if (error && !analysisLoading) { // Only show general error if not specifically loading analysis
+  if (error && !analysisLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-red-900 to-black text-white">
         <h1 className="text-3xl font-bold mb-4">Error</h1>
@@ -227,26 +214,18 @@ function DashboardContent() {
         </section>
 
         <section>
-          <h2 className="text-3xl font-bold mb-4 text-green-300">Music Analysis 📊</h2>
+          <h2 className="text-3xl font-bold mb-4 text-green-300">Playlist Vibe Analysis 📊</h2>
           <div className="bg-gray-800 bg-opacity-70 p-6 rounded-lg shadow-lg">
             {analysisLoading ? (
               <div className="flex flex-col items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-green-500"></div>
-                <p className="mt-4 text-lg">Analyzing {selectedPlaylist?.name || 'playlist'}...</p>
+                <p className="mt-4 text-lg">Analyzing {selectedPlaylist?.name || 'playlist'} vibe...</p>
               </div>
-            ) : selectedPlaylist && averageFeatures ? (
+            ) : selectedPlaylist && moodSummary ? (
               <div>
-                <h3 className="text-2xl font-semibold mb-4 text-green-400">Analysis for &quot;{selectedPlaylist.name}&quot;</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-lg">
-                  <p><span className="font-medium text-green-300">Danceability:</span> {averageFeatures.danceability}</p>
-                  <p><span className="font-medium text-green-300">Energy:</span> {averageFeatures.energy}</p>
-                  <p><span className="font-medium text-green-300">Valence (Positivity):</span> {averageFeatures.valence}</p>
-                  <p><span className="font-medium text-green-300">Acousticness:</span> {averageFeatures.acousticness}</p>
-                  <p><span className="font-medium text-green-300">Instrumentalness:</span> {averageFeatures.instrumentalness}</p>
-                  <p><span className="font-medium text-green-300">Liveness:</span> {averageFeatures.liveness}</p>
-                  <p><span className="font-medium text-green-300">Speechiness:</span> {averageFeatures.speechiness}</p>
-                  <p><span className="font-medium text-green-300">Average Tempo:</span> {averageFeatures.tempo} BPM</p>
-                </div>
+                <h3 className="text-2xl font-semibold mb-4 text-green-400">Vibe for &quot;{selectedPlaylist.name}&quot;</h3>
+                <p className="text-lg text-gray-200 mb-6">{moodSummary}</p>
+                
                 <h4 className="text-xl font-semibold mt-6 mb-3 text-green-400">Tracks in &quot;{selectedPlaylist.name}&quot; ({playlistTracks.length})</h4>
                 <div className="max-h-60 overflow-y-auto pr-2">
                   {playlistTracks.length > 0 ? (
@@ -276,10 +255,10 @@ function DashboardContent() {
               </div>
             ) : (
               <p className="text-gray-300">
-                Select a playlist above to see its music analysis!
+                Select a playlist above to see its vibe analysis!
               </p>
             )}
-            {error && analysisLoading && ( // Show analysis-specific error
+            {error && analysisLoading && (
               <p className="text-red-400 mt-4">Error during analysis: {error}</p>
             )}
           </div>

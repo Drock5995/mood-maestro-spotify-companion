@@ -14,7 +14,7 @@ export default function LoginPage() {
       'user-read-email',
       'playlist-read-private',
       'playlist-read-collaborative',
-      'user-library-read', // Added this scope for audio features
+      // 'user-library-read', // Removed this scope as it's not strictly needed for the new vibe analysis
     ].join(' ');
 
     if (!clientId) {
