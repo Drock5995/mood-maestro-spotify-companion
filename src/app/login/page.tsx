@@ -60,7 +60,7 @@ export default function LoginPage() {
           </h1>
         </div>
         <p className="text-lg sm:text-xl mb-8 text-gray-300 leading-relaxed">
-          Connect with Spotify to unlock personalized insights into your music, discover your top artists, and analyze your playlist vibes.
+          Your social Spotify hub. Analyze your playlists, share them with the community, and discover new music that matches your vibe.
         </p>
         <button
           onClick={handleLogin}
@@ -69,6 +69,7 @@ export default function LoginPage() {
           Connect with Spotify
         </button>
       </div>
+      <p className="text-gray-500 mt-8">Created by: David Spradlin</p>
     </main>
   );
 }
