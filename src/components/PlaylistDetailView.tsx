@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { ArrowLeft, Music, Users, Share2, CheckCircle, Send, Play, Pause } from 'lucide-react';
+import { toPng } from 'html-to-image';
+import { ArrowLeft, Music, Users, Share2, CheckCircle, Send, Play, Pause, Image as ImageIcon } from 'lucide-react';
 import { SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
 import { supabase } from '@/integrations/supabase/client';
 import { useSpotify } from '@/context/SpotifyContext';
 import CommentCard, { CommentWithProfile } from './CommentCard';
+import PlaylistPoster from './PlaylistPoster';
 
 interface PlaylistDetailViewProps {
   playlist: SpotifyPlaylist;
@@ -18,7 +20,7 @@ interface PlaylistDetailViewProps {
   isShared: boolean;
   sharedPlaylistId: string | null;
   onShareToggle: () => void;
-  onPlayTrack: (previewUrl: string | null) => void; // Added for audio playback
+  onPlayTrack: (previewUrl: string | null) => void;
 }
 
 const formatDuration = (ms: number) => {
@@ -34,11 +36,28 @@ const gradients = [
 
 export default function PlaylistDetailView({ playlist, tracks, artists, onBack, isShared, sharedPlaylistId, onShareToggle, onPlayTrack }: PlaylistDetailViewProps) {
   const { session } = useSpotify();
-  const [activeTab, setActiveTab] = useState<'overview' | 'songs' | 'social'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'songs' | 'social' | 'poster'>('overview');
   const [comments, setComments] = useState<CommentWithProfile[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPlayingTrackId, setCurrentPlayingTrackId] = useState<string | null>(null);
+  const posterRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPoster = useCallback(() => {
+    if (posterRef.current === null) {
+      return;
+    }
+    toPng(posterRef.current, { cacheBust: true, pixelRatio: 2 })
+      .then((dataUrl) => {
+        const link = document.createElement('a');
+        link.download = `${playlist.name.replace(/[^a-zA-Z0-9]/g, '-')}-poster.png`;
+        link.href = dataUrl;
+        link.click();
+      })
+      .catch((err) => {
+        console.error('Oops, something went wrong!', err);
+      });
+  }, [playlist.name]);
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -83,13 +102,12 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
 
   const handleTrackPlayToggle = (track: SpotifyTrack) => {
     if (currentPlayingTrackId === track.id) {
-      onPlayTrack(null); // Stop current track
+      onPlayTrack(null);
       setCurrentPlayingTrackId(null);
     } else if (track.preview_url) {
       onPlayTrack(track.preview_url);
       setCurrentPlayingTrackId(track.id);
     } else {
-      // Optionally, show a toast or message that no preview is available
       console.log(`No preview available for ${track.name}`);
     }
   };
@@ -179,6 +197,18 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
           )}
         </motion.div>
       );
+      case 'poster': return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center">
+            <p className="text-center text-gray-400 mb-4">Here&apos;s a shareable poster for your playlist!</p>
+            <PlaylistPoster posterRef={posterRef} playlist={playlist} tracks={tracks} artists={artists} />
+            <button
+                onClick={handleDownloadPoster}
+                className="mt-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 ease-in-out transform hover:scale-105"
+            >
+                Download Poster
+            </button>
+        </motion.div>
+      );
     }
   };
 
@@ -208,7 +238,7 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
       </header>
 
       <nav className="flex items-center space-x-1 sm:space-x-2 md:space-x-4 border-b border-white/10 mb-8 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto">
-        {([['overview', Music], ['songs', Users], ['social', Share2]] as const).map(([tab, Icon]) => (
+        {([['overview', Music], ['songs', Users], ['social', Share2], ['poster', ImageIcon]] as const).map(([tab, Icon]) => (
           <button key={tab} onClick={() => setActiveTab(tab)} className={`relative flex-shrink-0 flex items-center space-x-2 px-3 sm:px-4 py-3 font-semibold transition-colors ${activeTab === tab ? 'text-white' : 'text-gray-400 hover:text-white'}`}>
             <Icon className="w-5 h-5" /><span>{tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
             {activeTab === tab && <motion.div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-t-full" layoutId="underline" />}
