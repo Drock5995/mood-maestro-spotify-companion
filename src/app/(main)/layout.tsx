@@ -29,25 +29,42 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.provider_token) {
-        localStorage.setItem('spotify_access_token', session.provider_token);
-        const api = new SpotifyAPI(session.provider_token);
+    const handleAuthStateChange = async (_event: string, currentSession: Session | null) => {
+      setSession(currentSession);
+      if (currentSession?.provider_token) {
+        // If there's a session with a provider token, set it and initialize SpotifyAPI
+        localStorage.setItem('spotify_access_token', currentSession.provider_token);
+        const api = new SpotifyAPI(currentSession.provider_token);
         setSpotifyApi(api);
-      } else if (!session) {
+        // Attempt to fetch data immediately after setting up the API
+        await fetchData(api);
+      } else if (!currentSession) {
+        // If no session, clear tokens and redirect to login
         localStorage.removeItem('spotify_access_token');
+        setSpotifyApi(null);
+        setUser(null);
+        setPlaylists([]);
+        setLoading(false);
         router.push('/login');
       }
-    });
+    };
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setSession(session);
-        if (session.provider_token) {
-          localStorage.setItem('spotify_access_token', session.provider_token);
-          const api = new SpotifyAPI(session.provider_token);
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
+
+    // Initial session check on component mount
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      if (initialSession) {
+        setSession(initialSession);
+        if (initialSession.provider_token) {
+          localStorage.setItem('spotify_access_token', initialSession.provider_token);
+          const api = new SpotifyAPI(initialSession.provider_token);
           setSpotifyApi(api);
+          await fetchData(api); // Fetch data with the initial session's token
+        } else {
+          // If session exists but no provider token (e.g., email login without Spotify), redirect
+          setLoading(false);
+          router.push('/login');
         }
       } else {
         setLoading(false);
@@ -56,36 +73,28 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, [router]); // Only re-run on router changes
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (spotifyApi) {
-        setLoading(true);
-        setError(null);
-        try {
-          const [currentUser, userPlaylists] = await Promise.all([
-            spotifyApi.getCurrentUser(),
-            spotifyApi.getUserPlaylists(),
-          ]);
-          setUser(currentUser);
-          setPlaylists(userPlaylists);
-        } catch (err) {
-          console.error('Failed to fetch Spotify data:', err);
-          setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-          if (err instanceof Error && err.message === 'Token expired') {
-            await supabase.auth.signOut();
-          }
-        } finally {
-          setLoading(false);
-        }
+  const fetchData = async (apiInstance: SpotifyAPI) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [currentUser, userPlaylists] = await Promise.all([
+        apiInstance.getCurrentUser(),
+        apiInstance.getUserPlaylists(),
+      ]);
+      setUser(currentUser);
+      setPlaylists(userPlaylists);
+    } catch (err) {
+      console.error('Failed to fetch Spotify data:', err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+      if (err instanceof Error && err.message === 'Token expired') {
+        await supabase.auth.signOut(); // Force sign out if token is expired
       }
-    };
-
-    if (session) {
-      fetchData();
+    } finally {
+      setLoading(false);
     }
-  }, [spotifyApi, session, router]);
+  };
 
   const handlePlayTrack = (previewUrl: string | null) => {
     setCurrentPlayingTrackPreviewUrl(previewUrl);
@@ -94,7 +103,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   const contextValue = { spotifyApi, user, playlists, loading, error, session, onPlayTrack: handlePlayTrack };
   const playlistId = searchParams.get('playlist_id');
 
-  if (loading && !user) {
+  if (loading && !user && !error) { // Show loading only if no user and no error yet
     return (
       <div className="flex min-h-screen flex-col items-center justify-center text-white">
         <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div>
@@ -116,10 +125,10 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   }
 
   if (!session) {
+    // If not loading and no session, it means we've redirected to login or are about to
     return null;
   }
 
-  // This comment is added to force re-compilation and address a persistent build error.
   return (
     <SpotifyContext.Provider value={contextValue}>
       <div className="h-screen bg-black/20 lg:p-4 lg:flex lg:gap-4 pb-16"> {/* Added pb-16 for player */}

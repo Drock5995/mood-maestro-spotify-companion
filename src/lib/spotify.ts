@@ -71,9 +71,11 @@ export class SpotifyAPI {
   private accessToken: string | null = null;
 
   constructor(initialAccessToken?: string) {
+    // Always prioritize the token passed during construction
     if (initialAccessToken) {
       this.accessToken = initialAccessToken;
     } else if (typeof window !== 'undefined') {
+      // Fallback to localStorage only if no token is explicitly provided
       this.accessToken = localStorage.getItem('spotify_access_token');
     }
   }
