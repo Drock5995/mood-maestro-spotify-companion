@@ -18,6 +18,8 @@ export default function LoginPage() {
           'playlist-read-private',
           'playlist-read-collaborative',
           'user-top-read',
+          'playlist-modify-public',
+          'playlist-modify-private',
         ].join(' '),
         redirectTo: 'https://ashley-mood-maestro.netlify.app/dashboard',
       },

@@ -113,10 +113,14 @@ export class SpotifyAPI {
         this.clearTokens();
         throw new Error('Token expired');
       }
+      const errorBody = await response.json();
+      console.error("Spotify API Error:", errorBody);
       throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
     }
 
-    return response.json();
+    // Handle cases where response might be empty
+    const text = await response.text();
+    return text ? JSON.parse(text) : ({} as T);
   }
 
   async getCurrentUser(): Promise<SpotifyUser> {
@@ -161,5 +165,27 @@ export class SpotifyAPI {
       total: number;
     }>(`/me/top/artists?limit=${limit}&time_range=medium_term`);
     return response.items;
+  }
+
+  async searchTracks(query: string, limit: number = 10): Promise<SpotifyTrack[]> {
+    if (!query.trim()) return [];
+    const response = await this.makeRequest<{
+      tracks: {
+        items: SpotifyTrack[];
+      };
+    }>(`/search?q=${encodeURIComponent(query)}&type=track&limit=${limit}`);
+    return response.tracks.items;
+  }
+
+  async addTrackToPlaylist(playlistId: string, trackUri: string): Promise<{ snapshot_id: string }> {
+    return this.makeRequest<{ snapshot_id: string }>(
+      `/playlists/${playlistId}/tracks`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          uris: [trackUri],
+        }),
+      }
+    );
   }
 }

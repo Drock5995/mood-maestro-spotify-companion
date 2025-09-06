@@ -5,12 +5,13 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { toPng } from 'html-to-image';
-import { ArrowLeft, Music, Users, Share2, CheckCircle, Send, Play, Pause, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Music, Users, Share2, CheckCircle, Send, Play, Pause, Image as ImageIcon, GitPullRequest } from 'lucide-react';
 import { SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
 import { supabase } from '@/integrations/supabase/client';
 import { useSpotify } from '@/context/SpotifyContext';
 import CommentCard, { CommentWithProfile } from './CommentCard';
 import PlaylistPoster from './PlaylistPoster';
+import SuggestionManager from './SuggestionManager';
 
 interface PlaylistDetailViewProps {
   playlist: SpotifyPlaylist;
@@ -36,7 +37,7 @@ const gradients = [
 
 export default function PlaylistDetailView({ playlist, tracks, artists, onBack, isShared, sharedPlaylistId, onShareToggle, onPlayTrack }: PlaylistDetailViewProps) {
   const { session } = useSpotify();
-  const [activeTab, setActiveTab] = useState<'overview' | 'songs' | 'social' | 'poster'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'songs' | 'social' | 'poster' | 'suggestions'>('overview');
   const [comments, setComments] = useState<CommentWithProfile[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -170,7 +171,7 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
             <div className="text-center py-16 flex-1 flex flex-col justify-center items-center">
               <Share2 className="w-12 h-12 text-gray-600 mb-4" />
               <h3 className="text-2xl font-bold text-gray-400">This Playlist Isn&apos;t Shared</h3>
-              <p className="text-gray-500 mt-2">Share this playlist with the community to enable comments.</p>
+              <p className="text-gray-500 mt-2">Share this playlist with the community to enable comments and suggestions.</p>
             </div>
           ) : (
             <>
@@ -209,6 +210,19 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
             </button>
         </motion.div>
       );
+      case 'suggestions': return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          {!isShared || !sharedPlaylistId ? (
+            <div className="text-center py-16">
+              <GitPullRequest className="w-12 h-12 text-gray-600 mb-4 mx-auto" />
+              <h3 className="text-2xl font-bold text-gray-400">Share to Get Suggestions</h3>
+              <p className="text-gray-500 mt-2">You must share this playlist to the community to receive song suggestions.</p>
+            </div>
+          ) : (
+            <SuggestionManager sharedPlaylistId={sharedPlaylistId} spotifyPlaylistId={playlist.id} />
+          )}
+        </motion.div>
+      );
     }
   };
 
@@ -238,7 +252,10 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
       </header>
 
       <nav className="flex items-center space-x-1 sm:space-x-2 md:space-x-4 border-b border-white/10 mb-8 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto">
-        {([['overview', Music], ['songs', Users], ['social', Share2], ['poster', ImageIcon]] as const).map(([tab, Icon]) => (
+        {([
+          ['overview', Music], ['songs', Users], ['social', Share2], 
+          ['suggestions', GitPullRequest], ['poster', ImageIcon]
+        ] as const).map(([tab, Icon]) => (
           <button key={tab} onClick={() => setActiveTab(tab)} className={`relative flex-shrink-0 flex items-center space-x-2 px-3 sm:px-4 py-3 font-semibold transition-colors ${activeTab === tab ? 'text-white' : 'text-gray-400 hover:text-white'}`}>
             <Icon className="w-5 h-5" /><span>{tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
             {activeTab === tab && <motion.div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-t-full" layoutId="underline" />}
