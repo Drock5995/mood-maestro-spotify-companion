@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { CommunityPlaylistCard, SharedPlaylist } from '@/components/CommunityPlaylistCard';
 
@@ -8,32 +8,46 @@ export default function CommunityPage() {
   const [playlists, setPlaylists] = useState<SharedPlaylist[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchCommunityPlaylists = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('shared_playlists')
-        .select(`
-          id,
-          spotify_playlist_id,
-          playlist_name,
-          playlist_cover_url,
-          user_id,
-          profiles ( display_name, avatar_url ),
-          playlist_likes ( user_id )
-        `)
-        .order('created_at', { ascending: false });
+  const fetchCommunityPlaylists = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('shared_playlists')
+      .select(`
+        id,
+        spotify_playlist_id,
+        playlist_name,
+        playlist_cover_url,
+        user_id,
+        profiles ( display_name, avatar_url ),
+        playlist_likes ( user_id )
+      `)
+      .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching community playlists:', error);
-      } else if (data) {
-        setPlaylists(data as unknown as SharedPlaylist[]);
-      }
-      setLoading(false);
-    };
-
-    fetchCommunityPlaylists();
+    if (error) {
+      console.error('Error fetching community playlists:', error);
+    } else if (data) {
+      setPlaylists(data as unknown as SharedPlaylist[]);
+    }
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    fetchCommunityPlaylists();
+
+    const channel = supabase
+      .channel('public:shared_playlists')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'shared_playlists' },
+        () => {
+          fetchCommunityPlaylists();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchCommunityPlaylists]);
 
   if (loading) {
     return (
