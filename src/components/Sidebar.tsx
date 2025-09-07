@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Heart, Music, LogOut, User, MessageSquare, Bot } from 'lucide-react'; // Added Bot icon
+import { Home, Users, Heart, Music, LogOut, User, MessageSquare, Bot } from 'lucide-react';
 import { SpotifyPlaylist } from '@/lib/spotify';
 import { useSpotify } from '@/context/SpotifyContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -65,7 +65,7 @@ export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: Sidebar
         <NavLink href="/community" icon={Users} label="Community" />
         <NavLink href="/friends" icon={Heart} label="Matchmaker" />
         <NavLink href="/messages" icon={MessageSquare} label="Messages" />
-        <NavLink href="/ai-agent" icon={Bot} label="AI Assistant" /> {/* New AI Agent Link */}
+        <NavLink href="/ai-chat" icon={Bot} label="AI Chat" />
         {session?.user && <NavLink href={`/profile/${session.user.id}`} icon={User} label="My Profile" />}
       </nav>
 
