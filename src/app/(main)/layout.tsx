@@ -32,6 +32,9 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleAuthStateChange = async (_event: string, currentSession: Session | null) => {
       setSession(currentSession);
+      console.log('Auth state changed. Current session:', currentSession); // Debugging log
+      console.log('Provider token:', currentSession?.provider_token); // Debugging log
+
       if (currentSession?.provider_token) {
         const api = new SpotifyAPI(currentSession.provider_token);
         setSpotifyApi(api);
@@ -48,6 +51,9 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      console.log('Initial session check. Session:', initialSession); // Debugging log
+      console.log('Initial provider token:', initialSession?.provider_token); // Debugging log
+
       if (initialSession) {
         setSession(initialSession);
         if (initialSession.provider_token) {
@@ -124,7 +130,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   return (
     <SpotifyContext.Provider value={contextValue}>
       <PushNotificationManager />
-      <div className="h-screen bg-gray-950 lg:p-4 lg:flex lg:gap-4 pb-20"> {/* Adjusted pb-16 to pb-20 for more player space, bg-black/20 to bg-gray-950 */}
+      <div className="h-screen bg-gray-950 lg:p-4 lg:flex lg:gap-4 pb-20">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block w-72 flex-shrink-0">
           <Sidebar 
@@ -163,7 +169,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
 
         <div className="flex-1 flex flex-col overflow-hidden">
           <MobileHeader onMenuClick={() => setIsSidebarOpen(true)} />
-          <main className={`flex-1 flex flex-col relative bg-gray-900/70 backdrop-blur-lg lg:rounded-2xl lg:border lg:border-white/10 p-4 sm:p-6 ${isSidebarOpen ? 'overflow-y-hidden lg:overflow-y-auto' : 'overflow-y-auto'}`}> {/* Adjusted bg-black/30 to bg-gray-900/70 */}
+          <main className={`flex-1 flex flex-col relative bg-gray-900/70 backdrop-blur-lg lg:rounded-2xl lg:border lg:border-white/10 p-4 sm:p-6 ${isSidebarOpen ? 'overflow-y-hidden lg:overflow-y-auto' : 'overflow-y-auto'}`}>
             {children}
           </main>
         </div>

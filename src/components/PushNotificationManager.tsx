@@ -46,6 +46,7 @@ export default function PushNotificationManager() {
           }
 
           const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+          console.log('VAPID Public Key from env:', vapidPublicKey); // Debugging log
           if (!vapidPublicKey) {
             console.error('VAPID public key not found in environment.');
             toast.error('Push notification setup is incomplete on the server.');
