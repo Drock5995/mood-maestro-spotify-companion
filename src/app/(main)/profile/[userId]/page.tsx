@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { User, Music } from 'lucide-react';
@@ -22,67 +22,80 @@ export default function ProfilePage() {
   const [playlists, setPlaylists] = useState<SharedPlaylist[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchProfileData = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+
+    // Fetch profile info
+    let { data: profileData } = await supabase
+      .from('profiles')
+      .select('display_name, avatar_url')
+      .eq('id', userId)
+      .single();
+    
+    if (!profileData && session?.user?.id === userId) {
+      const { data: newProfile, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          display_name: session.user.user_metadata.full_name,
+          avatar_url: session.user.user_metadata.avatar_url,
+        })
+        .select('display_name, avatar_url')
+        .single();
+
+      if (error) console.error("Error creating profile:", error);
+      else profileData = newProfile;
+    }
+    
+    setProfile(profileData);
+
+    // Fetch user's shared playlists
+    const { data: playlistData } = await supabase
+      .from('shared_playlists')
+      .select(`
+        id,
+        spotify_playlist_id,
+        playlist_name,
+        playlist_cover_url,
+        user_id,
+        profiles ( display_name, avatar_url ),
+        playlist_likes ( user_id )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (playlistData) {
+      setPlaylists(playlistData as unknown as SharedPlaylist[]);
+    }
+    
+    setLoading(false);
+  }, [userId, session]);
+
+  useEffect(() => {
+    if (session !== undefined) {
+      fetchProfileData();
+    }
+  }, [session, fetchProfileData]);
+
   useEffect(() => {
     if (!userId) return;
 
-    const fetchProfileData = async () => {
-      setLoading(true);
-
-      // Fetch profile info
-      let { data: profileData } = await supabase
-        .from('profiles')
-        .select('display_name, avatar_url')
-        .eq('id', userId)
-        .single();
-      
-      // If profile doesn't exist and it's the current user's profile, create it.
-      if (!profileData && session?.user?.id === userId) {
-        const { data: newProfile, error } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            display_name: session.user.user_metadata.full_name,
-            avatar_url: session.user.user_metadata.avatar_url,
-          })
-          .select('display_name, avatar_url')
-          .single();
-
-        if (error) {
-          console.error("Error creating profile:", error);
-        } else {
-          profileData = newProfile;
+    const channel = supabase
+      .channel(`profile-playlists:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'shared_playlists' },
+        () => {
+          fetchProfileData();
         }
-      }
-      
-      setProfile(profileData);
+      )
+      .subscribe();
 
-      // Fetch user's shared playlists
-      const { data: playlistData } = await supabase
-        .from('shared_playlists')
-        .select(`
-          id,
-          spotify_playlist_id,
-          playlist_name,
-          playlist_cover_url,
-          user_id,
-          profiles ( display_name, avatar_url ),
-          playlist_likes ( user_id )
-        `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (playlistData) {
-        setPlaylists(playlistData as unknown as SharedPlaylist[]);
-      }
-      
-      setLoading(false);
+    return () => {
+      supabase.removeChannel(channel);
     };
-
-    // Only run fetch if session is available, to ensure we can check for own profile
-    if (session !== undefined) {
-        fetchProfileData();
-    }
-  }, [userId, session]);
+  }, [userId, fetchProfileData]);
 
   if (loading) {
     return (

@@ -34,7 +34,7 @@ export default function CommunityPage() {
     fetchCommunityPlaylists();
 
     const channel = supabase
-      .channel('public:shared_playlists')
+      .channel('community-playlists')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'shared_playlists' },
