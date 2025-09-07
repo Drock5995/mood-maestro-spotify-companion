@@ -120,12 +120,14 @@ export class SpotifyAPI {
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
-        this.clearTokens();
-        throw new Error('Token expired');
-      }
       const errorBody = await response.json();
       console.error("Spotify API Error:", errorBody);
+
+      // Treat 401 Unauthorized and 403 Forbidden as token issues
+      if (response.status === 401 || response.status === 403) {
+        this.clearTokens();
+        throw new Error('Token expired'); // This will trigger re-authentication in the layout
+      }
       throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
     }
 
