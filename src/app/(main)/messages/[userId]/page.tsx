@@ -43,7 +43,7 @@ export default function ChatPage() {
       const messagesPromise = supabase
         .from('messages')
         .select('*')
-        .or(`(sender_id.eq.${session.user.id},receiver_id.eq.${otherUserId}),(sender_id.eq.${otherUserId},receiver_id.eq.${session.user.id})`)
+        .or(`and(sender_id.eq.${session.user.id},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${session.user.id})`)
         .order('created_at', { ascending: true });
 
       const [{ data: profileData }, { data: messageData }] = await Promise.all([profilePromise, messagesPromise]);
@@ -141,7 +141,7 @@ export default function ChatPage() {
           <input
             type="text"
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => setNewMessage(e.g.target.value)}
             placeholder="Type a message..."
             className="flex-1 bg-white/5 border border-white/10 rounded-full py-2 px-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
           />
