@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useSpotify } from '@/context/SpotifyContext';
 import { supabase } from '@/integrations/supabase/client';
 import toast from 'react-hot-toast';
+import { Bell } from 'lucide-react';
 
 // Helper function to convert VAPID key
 function urlBase64ToUint8Array(base64String: string) {
@@ -24,69 +25,100 @@ function urlBase64ToUint8Array(base64String: string) {
 export default function PushNotificationManager() {
   const { session } = useSpotify();
 
+  const setupPushNotifications = useCallback(async () => {
+    if (!session?.user || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      return;
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      
+      // Permission is now requested inside this user-triggered function
+      const permission = await window.Notification.requestPermission();
+      if (permission !== 'granted') {
+        toast.error('Notification permission denied.');
+        return;
+      }
+
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) {
+        console.error('VAPID public key not found.');
+        toast.error('Push notification setup is incomplete on the server.');
+        return;
+      }
+
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+      });
+
+      const { error } = await supabase
+        .from('push_subscriptions')
+        .upsert({
+          user_id: session.user.id,
+          subscription: subscription.toJSON(),
+        }, { onConflict: 'user_id' });
+
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('Notifications enabled!');
+
+    } catch (error) {
+      console.error('Push Notification setup failed:', error);
+      toast.error('Could not enable notifications.');
+    }
+  }, [session]);
+
+
   useEffect(() => {
     if (!session?.user) return;
 
-    const setupPushNotifications = async () => {
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
-        try {
-          const registration = await navigator.serviceWorker.register('/sw.js');
-          
-          let subscription = await registration.pushManager.getSubscription();
-          
-          if (subscription) {
-            console.log('User is already subscribed.');
-            return;
-          }
+    // Check if we should prompt the user
+    const checkAndPrompt = async () => {
+      if ('serviceWorker' in navigator && 'PushManager' in window && Notification.permission === 'default') {
+        // Check if user is already subscribed in our DB to avoid re-prompting
+        const { data } = await supabase
+          .from('push_subscriptions')
+          .select('user_id')
+          .eq('user_id', session.user!.id)
+          .single();
 
-          const permission = await window.Notification.requestPermission();
-          if (permission !== 'granted') {
-            console.log('Notification permission not granted.');
-            return;
-          }
-
-          const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-          if (!vapidPublicKey) {
-            console.error('VAPID public key not found in environment.');
-            toast.error('Push notification setup is incomplete on the server.');
-            return;
-          }
-
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-          });
-
-          const { error } = await supabase
-            .from('push_subscriptions')
-            .upsert({
-              user_id: session.user.id,
-              subscription: subscription.toJSON(),
-            }, { onConflict: 'user_id' });
-
-          if (error) {
-            console.error('Error saving push subscription:', error);
-            toast.error('Failed to save notification settings.');
-          } else {
-            console.log('User subscribed to push notifications.');
-            toast.success('Notifications enabled!');
-          }
-
-        } catch (error) {
-          console.error('Service Worker registration failed:', error);
-          if (error instanceof Error) {
-            console.error('Error name:', error.name);
-            console.error('Error message:', error.message);
-          }
-          toast.error('Could not enable notifications. Please check permissions and try again.');
+        if (!data) {
+          // User is not subscribed, so we can prompt them.
+          toast(
+            (t) => (
+              <div className="flex items-center space-x-4">
+                <Bell className="w-8 h-8 text-purple-400" />
+                <div className="flex-1">
+                  <p className="font-bold">Stay in the loop!</p>
+                  <p className="text-sm">Enable notifications for messages and friend requests.</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setupPushNotifications();
+                    toast.dismiss(t.id);
+                  }}
+                  className="px-3 py-1.5 bg-purple-600 text-white rounded-md font-semibold text-sm hover:bg-purple-700"
+                >
+                  Enable
+                </button>
+              </div>
+            ),
+            {
+              duration: Infinity, // Keep it open until user interacts
+            }
+          );
         }
       }
     };
 
-    const timer = setTimeout(setupPushNotifications, 3000);
+    // Delay the prompt slightly so it doesn't appear instantly on load
+    const timer = setTimeout(checkAndPrompt, 5000);
     return () => clearTimeout(timer);
 
-  }, [session]);
+  }, [session, setupPushNotifications]);
 
   return null;
 }
