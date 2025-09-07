@@ -21,7 +21,7 @@ export default function LoginPage() {
           'playlist-modify-public',
           'playlist-modify-private',
         ].join(' '),
-        redirectTo: 'https://ashley-mood-maestro.netlify.app/dashboard',
+        redirectTo: 'https://playlisterr.netlify.app/dashboard',
       },
     });
 
