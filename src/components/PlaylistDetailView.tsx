@@ -78,7 +78,13 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
         console.error("Error fetching comments:", error);
         toast.error("Could not load comments.");
       } else if (data) {
-        setComments(data as CommentWithProfile[]);
+        // Supabase returns the joined 'profiles' as an array, but our type expects an object.
+        // We transform the data to match the expected shape.
+        const formattedComments: CommentWithProfile[] = data.map((comment: any) => ({
+          ...comment,
+          profiles: comment.profiles[0] || null,
+        }));
+        setComments(formattedComments);
       }
     };
     
