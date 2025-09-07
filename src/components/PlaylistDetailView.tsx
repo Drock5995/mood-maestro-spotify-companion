@@ -12,6 +12,7 @@ import { useSpotify } from '@/context/SpotifyContext';
 import CommentCard, { CommentWithProfile } from './CommentCard';
 import PlaylistPoster from './PlaylistPoster';
 import SuggestionManager from './SuggestionManager';
+import toast from 'react-hot-toast';
 
 interface PlaylistDetailViewProps {
   playlist: SpotifyPlaylist;
@@ -66,15 +67,36 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
         setComments([]);
         return;
       }
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('playlist_comments')
         .select('*, profiles(display_name, avatar_url)')
         .eq('shared_playlist_id', sharedPlaylistId)
         .order('created_at', { ascending: true });
       
-      if (data) setComments(data as CommentWithProfile[]);
+      if (error) {
+        console.error("Error fetching comments:", error);
+        toast.error("Could not load comments.");
+      } else if (data) {
+        setComments(data as CommentWithProfile[]);
+      }
     };
+    
     fetchComments();
+
+    if (!sharedPlaylistId) return;
+
+    const channel = supabase
+      .channel(`playlist-comments:${sharedPlaylistId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'playlist_comments', filter: `shared_playlist_id=eq.${sharedPlaylistId}` },
+        () => fetchComments()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [sharedPlaylistId]);
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
@@ -82,20 +104,18 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
     if (!newComment.trim() || !session?.user || !sharedPlaylistId) return;
 
     setIsSubmitting(true);
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('playlist_comments')
       .insert({
         user_id: session.user.id,
         shared_playlist_id: sharedPlaylistId,
         comment_text: newComment,
-      })
-      .select('*, profiles(display_name, avatar_url)')
-      .single();
+      });
 
     if (error) {
       console.error('Error posting comment:', error);
-    } else if (data) {
-      setComments(prev => [...prev, data as CommentWithProfile]);
+      toast.error("Failed to post comment.");
+    } else {
       setNewComment('');
     }
     setIsSubmitting(false);
