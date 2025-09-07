@@ -25,7 +25,8 @@ export default function LoginPage() {
           'playlist-modify-public',
           'playlist-modify-private',
           'user-read-playback-state',
-          'user-read-recently-played', // Added this scope
+          'user-read-recently-played',
+          'user-library-read', // Added this scope for broader access
         ].join(' '),
         redirectTo: redirectTo,
       },
@@ -48,7 +49,6 @@ export default function LoginPage() {
         errorMessage += ` Details: ${decodeURIComponent(details)}`;
       }
       errorMessage += ` Please try again.`;
-      alert(errorMessage);
       router.replace('/login');
     }
   }, [router]);

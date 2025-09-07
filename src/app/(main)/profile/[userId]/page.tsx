@@ -60,10 +60,11 @@ export default function ProfilePage() {
       return;
     }
     setLoadingFriendship(true);
+    // Corrected PostgREST syntax for nested AND conditions within an OR
     const { data } = await supabase
       .from('friends')
       .select('id, status, user_id')
-      .or(`(user_id.eq.${session.user.id},friend_id.eq.${userId}),(user_id.eq.${userId},friend_id.eq.${session.user.id})`)
+      .or(`and(user_id.eq.${session.user.id},friend_id.eq.${userId}),and(user_id.eq.${userId},friend_id.eq.${session.user.id})`)
       .single();
 
     if (data) {
