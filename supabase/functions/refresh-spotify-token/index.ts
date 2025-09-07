@@ -51,7 +51,7 @@ serve(async (req) => {
 
     const spotifyResponse = await response.json();
     if (!response.ok) {
-      throw new Error(`Spotify token refresh failed: ${spotifyResponse.error_description}`);
+      throw new Error(`Spotify token refresh failed: ${spotifyResponse.error_description || spotifyResponse.error}`);
     }
 
     // 4. Update the tokens in the database
@@ -78,7 +78,8 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    return new Response(String(err?.message ?? err), {
+    console.error('Error in refresh-spotify-token function:', err);
+    return new Response(JSON.stringify({ error: err?.message ?? String(err) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });

@@ -108,8 +108,18 @@ export class SpotifyAPI {
       this.refreshPromise = (async () => {
         try {
           const { data, error } = await this.supabase!.functions.invoke('refresh-spotify-token');
-          if (error) throw error;
-          if (!data.access_token) throw new Error("No access token returned from refresh function.");
+          
+          if (error) {
+            console.error("Edge function invocation error:", error);
+            throw error;
+          }
+          if (data.error) {
+            console.error("Edge function returned an error:", data.error);
+            throw new Error(data.error);
+          }
+          if (!data.access_token) {
+            throw new Error("No access token returned from refresh function.");
+          }
           
           this.setAccessToken(data.access_token);
           return data.access_token;
