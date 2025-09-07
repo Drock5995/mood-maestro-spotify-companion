@@ -30,13 +30,38 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
+    const getAndSetSpotifyApi = async (currentSession: Session) => {
+      if (!currentSession.user?.id) {
+        console.error("Session user ID is missing.");
+        setLoading(false);
+        router.push('/login');
+        return;
+      }
+
+      const { data: spotifyTokenData, error: tokenError } = await supabase
+        .from('spotify_tokens')
+        .select('access_token')
+        .eq('user_id', currentSession.user.id)
+        .single();
+
+      if (tokenError || !spotifyTokenData?.access_token) {
+        console.error('Failed to retrieve Spotify access token from DB:', tokenError?.message);
+        setError('Failed to retrieve Spotify access token. Please log in again.');
+        await supabase.auth.signOut();
+        return;
+      }
+
+      const latestAccessToken = spotifyTokenData.access_token;
+      const api = new SpotifyAPI(latestAccessToken);
+      setSpotifyApi(api);
+      await fetchData(api);
+    };
+
     const handleAuthStateChange = async (_event: string, currentSession: Session | null) => {
       setSession(currentSession);
-      if (currentSession?.provider_token) {
-        const api = new SpotifyAPI(currentSession.provider_token);
-        setSpotifyApi(api);
-        await fetchData(api);
-      } else if (!currentSession) {
+      if (currentSession) {
+        await getAndSetSpotifyApi(currentSession);
+      } else {
         setSpotifyApi(null);
         setUser(null);
         setPlaylists([]);
@@ -50,14 +75,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
       if (initialSession) {
         setSession(initialSession);
-        if (initialSession.provider_token) {
-          const api = new SpotifyAPI(initialSession.provider_token);
-          setSpotifyApi(api);
-          await fetchData(api);
-        } else {
-          setLoading(false);
-          router.push('/login');
-        }
+        await getAndSetSpotifyApi(initialSession);
       } else {
         setLoading(false);
         router.push('/login');
