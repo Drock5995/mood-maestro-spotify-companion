@@ -139,6 +139,10 @@ export class SpotifyAPI {
     return response.items;
   }
 
+  async getPlaylist(playlistId: string): Promise<SpotifyPlaylist> {
+    return this.makeRequest<SpotifyPlaylist>(`/playlists/${playlistId}`);
+  }
+
   async getPlaylistTracks(playlistId: string): Promise<SpotifyTrack[]> {
     const response = await this.makeRequest<{
       items: Array<{ track: SpotifyTrack | null }>;

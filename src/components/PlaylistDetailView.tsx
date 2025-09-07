@@ -24,6 +24,7 @@ interface PlaylistDetailViewProps {
   sharedPlaylistId: string | null;
   onShareToggle: () => void;
   onPlayTrack: (previewUrl: string | null) => void;
+  isOwner?: boolean;
 }
 
 const formatDuration = (ms: number) => {
@@ -37,7 +38,7 @@ const gradients = [
   ['#6366F1', '#8B5CF6'], ['#EF4444', '#F59E0B'],
 ];
 
-export default function PlaylistDetailView({ playlist, tracks, artists, onBack, isShared, sharedPlaylistId, onShareToggle, onPlayTrack }: PlaylistDetailViewProps) {
+export default function PlaylistDetailView({ playlist, tracks, artists, onBack, isShared, sharedPlaylistId, onShareToggle, onPlayTrack, isOwner = false }: PlaylistDetailViewProps) {
   const { session } = useSpotify();
   const [activeTab, setActiveTab] = useState<'overview' | 'songs' | 'social' | 'poster' | 'suggestions'>('overview');
   const [comments, setComments] = useState<CommentWithProfile[]>([]);
@@ -248,8 +249,12 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
           ) : (
             <>
               <SongSuggester sharedPlaylistId={sharedPlaylistId} />
-              <h3 className="text-xl font-bold mt-8 mb-4 border-t border-white/10 pt-6">Manage Suggestions</h3>
-              <SuggestionManager sharedPlaylistId={sharedPlaylistId} spotifyPlaylistId={playlist.id} />
+              {isOwner && (
+                <>
+                  <h3 className="text-xl font-bold mt-8 mb-4 border-t border-white/10 pt-6">Manage Suggestions</h3>
+                  <SuggestionManager sharedPlaylistId={sharedPlaylistId} spotifyPlaylistId={playlist.id} />
+                </>
+              )}
             </>
           )}
         </motion.div>
@@ -275,7 +280,11 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
           <p className="text-sm font-bold text-purple-400 uppercase tracking-widest">Playlist</p>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mt-2 mb-4">{playlist.name}</h1>
           <p className="text-gray-400 max-w-prose text-sm sm:text-base">{playlist.description || 'A collection of amazing tracks.'}</p>
-          <button onClick={onShareToggle} className={`mt-4 flex items-center space-x-2 px-4 py-2 rounded-full font-semibold transition-all duration-300 ${isShared ? 'bg-emerald-500 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`}>
+          <button 
+            onClick={onShareToggle} 
+            disabled={!isOwner}
+            className={`mt-4 flex items-center space-x-2 px-4 py-2 rounded-full font-semibold transition-all duration-300 ${isShared ? 'bg-emerald-500 text-white' : 'bg-white/10 hover:bg-white/20 text-white'} ${!isOwner ? 'cursor-not-allowed opacity-70' : ''}`}
+          >
             {isShared ? <CheckCircle size={20} /> : <Share2 size={20} />}
             <span>{isShared ? 'Shared to Community' : 'Share to Community'}</span>
           </button>

@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 
 export interface SharedPlaylist {
   id: string;
+  spotify_playlist_id: string;
   playlist_name: string;
   playlist_cover_url: string | null;
   user_id: string;
@@ -24,9 +25,10 @@ export interface SharedPlaylist {
 interface CommunityPlaylistCardProps {
   playlist: SharedPlaylist;
   index: number;
+  onClick: () => void;
 }
 
-export const CommunityPlaylistCard = ({ playlist, index }: CommunityPlaylistCardProps) => {
+export const CommunityPlaylistCard = ({ playlist, index, onClick }: CommunityPlaylistCardProps) => {
   const { session } = useSpotify();
   const [likeCount, setLikeCount] = useState(playlist.playlist_likes.length);
   const [isLiked, setIsLiked] = useState(false);
@@ -37,7 +39,8 @@ export const CommunityPlaylistCard = ({ playlist, index }: CommunityPlaylistCard
     }
   }, [session, playlist.playlist_likes]);
 
-  const handleLike = async () => {
+  const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!session?.user) {
       toast.error("You must be logged in to like a playlist.");
       return;
@@ -75,8 +78,9 @@ export const CommunityPlaylistCard = ({ playlist, index }: CommunityPlaylistCard
   const ownerAvatar = playlist.profiles?.avatar_url || `https://i.pravatar.cc/40?u=${playlist.user_id}`;
 
   return (
-    <motion.div
-      className="relative rounded-2xl overflow-hidden group"
+    <motion.button
+      onClick={onClick}
+      className="relative rounded-2xl overflow-hidden group text-left w-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -86,7 +90,7 @@ export const CommunityPlaylistCard = ({ playlist, index }: CommunityPlaylistCard
       <div className="absolute bottom-0 left-0 p-4 text-white w-full">
         <h3 className="text-xl font-bold truncate">{playlist.playlist_name}</h3>
         <div className="flex items-center justify-between mt-2">
-          <Link href={`/profile/${playlist.user_id}`} className="flex items-center space-x-2 min-w-0 group/profile">
+          <Link href={`/profile/${playlist.user_id}`} onClick={(e) => e.stopPropagation()} className="flex items-center space-x-2 min-w-0 group/profile">
             <Image src={ownerAvatar} alt={ownerName} width={24} height={24} className="rounded-full flex-shrink-0" />
             <span className="text-sm font-medium truncate group-hover/profile:underline">{ownerName}</span>
           </Link>
@@ -96,6 +100,6 @@ export const CommunityPlaylistCard = ({ playlist, index }: CommunityPlaylistCard
           </button>
         </div>
       </div>
-    </motion.div>
+    </motion.button>
   );
 };

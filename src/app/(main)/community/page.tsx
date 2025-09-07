@@ -1,14 +1,31 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { CommunityPlaylistCard, SharedPlaylist } from '@/components/CommunityPlaylistCard';
+import { useSpotify } from '@/context/SpotifyContext';
+import { SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
+import PlaylistDetailView from '@/components/PlaylistDetailView';
 
-export default function CommunityPage() {
+function CommunityPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { spotifyApi, onPlayTrack } = useSpotify();
+
   const [playlists, setPlaylists] = useState<SharedPlaylist[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // State for detail view
+  const [selectedPlaylist, setSelectedPlaylist] = useState<SharedPlaylist | null>(null);
+  const [selectedPlaylistDetails, setSelectedPlaylistDetails] = useState<SpotifyPlaylist | null>(null);
+  const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
+  const [playlistArtists, setPlaylistArtists] = useState<SpotifyArtist[]>([]);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+
   const fetchCommunityPlaylists = useCallback(async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from('shared_playlists')
       .select(`
@@ -38,9 +55,7 @@ export default function CommunityPage() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'shared_playlists' },
-        () => {
-          fetchCommunityPlaylists();
-        }
+        () => fetchCommunityPlaylists()
       )
       .subscribe();
 
@@ -48,6 +63,51 @@ export default function CommunityPage() {
       supabase.removeChannel(channel);
     };
   }, [fetchCommunityPlaylists]);
+
+  const handlePlaylistSelect = useCallback(async (playlist: SharedPlaylist) => {
+    if (!spotifyApi) return;
+    
+    setIsDetailLoading(true);
+    setSelectedPlaylist(playlist);
+    router.push(`/community?shared_id=${playlist.id}`, { scroll: false });
+
+    try {
+      const playlistDetails = await spotifyApi.getPlaylist(playlist.spotify_playlist_id);
+      setSelectedPlaylistDetails(playlistDetails);
+
+      const tracks = await spotifyApi.getPlaylistTracks(playlist.spotify_playlist_id);
+      setPlaylistTracks(tracks);
+
+      const artistIds = [...new Set(tracks.flatMap(track => track.artists.map(artist => artist.id)))];
+      if (artistIds.length > 0) {
+        const artists = await spotifyApi.getSeveralArtists(artistIds);
+        setPlaylistArtists(artists);
+      } else {
+        setPlaylistArtists([]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch playlist details:', err);
+    } finally {
+      setIsDetailLoading(false);
+    }
+  }, [spotifyApi, router]);
+
+  useEffect(() => {
+    const sharedId = searchParams.get('shared_id');
+    if (sharedId && playlists.length > 0) {
+      const playlistToSelect = playlists.find(p => p.id === sharedId);
+      if (playlistToSelect && (!selectedPlaylist || selectedPlaylist.id !== sharedId)) {
+        handlePlaylistSelect(playlistToSelect);
+      }
+    }
+  }, [searchParams, playlists, selectedPlaylist, handlePlaylistSelect]);
+
+  const handleBack = () => {
+    setSelectedPlaylist(null);
+    setSelectedPlaylistDetails(null);
+    onPlayTrack(null);
+    router.push('/community', { scroll: false });
+  };
 
   if (loading) {
     return (
@@ -65,7 +125,7 @@ export default function CommunityPage() {
         </h1>
         <p className="text-gray-400 mt-2">Discover what others are listening to.</p>
       </header>
-      <div className="flex-1 overflow-y-auto pr-2">
+      <div className={`flex-1 pr-2 relative ${selectedPlaylist ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
         {playlists.length === 0 ? (
           <div className="text-center py-16">
             <h3 className="text-2xl font-bold text-gray-400">It's quiet in here...</h3>
@@ -74,11 +134,40 @@ export default function CommunityPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {playlists.map((p, index) => (
-              <CommunityPlaylistCard key={p.id} playlist={p} index={index} />
+              <CommunityPlaylistCard key={p.id} playlist={p} index={index} onClick={() => handlePlaylistSelect(p)} />
             ))}
           </div>
         )}
+        <AnimatePresence>
+          {selectedPlaylist && selectedPlaylistDetails && (
+            <PlaylistDetailView
+              key={selectedPlaylist.id}
+              playlist={selectedPlaylistDetails}
+              tracks={playlistTracks}
+              artists={playlistArtists}
+              onBack={handleBack}
+              isShared={true}
+              sharedPlaylistId={selectedPlaylist.id}
+              onShareToggle={() => {}}
+              onPlayTrack={onPlayTrack}
+              isOwner={false}
+            />
+          )}
+        </AnimatePresence>
+        {isDetailLoading && (
+           <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-20">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div>
+           </div>
+        )}
       </div>
     </>
+  );
+}
+
+export default function CommunityPage() {
+  return (
+    <Suspense>
+      <CommunityPageContent />
+    </Suspense>
   );
 }

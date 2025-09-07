@@ -167,7 +167,7 @@ function DashboardContent() {
         <AnimatePresence>
           {selectedPlaylist && (
             <PlaylistDetailView
-              key={selectedPlaylist.id} // Added key prop here
+              key={selectedPlaylist.id}
               playlist={selectedPlaylist}
               tracks={playlistTracks}
               artists={playlistArtists}
@@ -176,6 +176,7 @@ function DashboardContent() {
               sharedPlaylistId={sharedPlaylistsMap.get(selectedPlaylist.id) || null}
               onShareToggle={() => handleShareToggle(selectedPlaylist)}
               onPlayTrack={onPlayTrack}
+              isOwner={true}
             />
           )}
         </AnimatePresence>
