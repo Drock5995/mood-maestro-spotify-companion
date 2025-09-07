@@ -191,7 +191,7 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
                   <BarChart data={analysis?.topGenres} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                     <XAxis type="number" hide /><YAxis type="category" dataKey="name" width={120} tick={{ fill: '#A0AEC0' }} axisLine={false} tickLine={false} />
                     <Tooltip cursor={{ fill: 'rgba(255,255,255,0.1)' }} contentStyle={{ backgroundColor: '#1A202C', border: 'none', borderRadius: '10px' }} />
-                    <Bar dataKey="count" barSize={20} radius={[0, 10, 10, 0]}>{analysis?.topGenres.map((entry, index) => <Cell key={`cell-${index}`} fill={`url(#color${index % gradients.length})`} />)}</Bar>
+                    <Bar dataKey="count" barSize={20} radius={[0, 10, 10, 0]}>{analysis?.topGenres?.map((entry, index) => <Cell key={`cell-${index}`} fill={`url(#color${index % gradients.length})`} />)}</Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -327,13 +327,19 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
       <button onClick={onBack} className="flex items-center space-x-2 text-gray-300 hover:text-white mb-6 self-start" aria-label={backButtonText}><ArrowLeft aria-hidden="true" /><span>{backButtonText}</span></button>
 
       <header className="flex flex-col md:flex-row items-center text-center md:text-left gap-4 md:gap-8 mb-8">
-        <Image 
-          src={playlist.images[0].url} 
-          alt={`Cover for ${playlist.name}`} 
-          width={200} 
-          height={200} 
-          className="rounded-2xl shadow-2xl flex-shrink-0 w-32 h-32 sm:w-40 sm:h-40 md:w-52 md:h-52 object-cover" 
-        />
+        {playlist.images?.[0]?.url ? (
+          <Image 
+            src={playlist.images[0].url} 
+            alt={`Cover for ${playlist.name}`} 
+            width={200} 
+            height={200} 
+            className="rounded-2xl shadow-2xl flex-shrink-0 w-32 h-32 sm:w-40 sm:h-40 md:w-52 md:h-52 object-cover" 
+          />
+        ) : (
+          <div className="rounded-2xl shadow-2xl flex-shrink-0 w-32 h-32 sm:w-40 sm:h-40 md:w-52 md:h-52 bg-gray-800 flex items-center justify-center">
+            <Music className="w-16 h-16 text-gray-600" />
+          </div>
+        )}
         <div>
           <p className="text-sm font-bold text-purple-400 uppercase tracking-widest">Playlist</p>
           <h1 id="playlist-detail-title" className="text-4xl sm:text-5xl md:text-6xl font-extrabold mt-2 mb-4">{playlist.name}</h1>
