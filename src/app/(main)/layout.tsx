@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { AnimatePresence, motion } from 'framer-motion';
 import AudioPlayer from '@/components/AudioPlayer';
-import PushNotificationManager from '@/components/PushNotificationManager'; // Import the manager
+import PushNotificationManager from '@/components/PushNotificationManager';
 
 function MainLayoutContent({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -38,21 +38,41 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
         return;
       }
 
-      const { data: spotifyTokenData, error: tokenError } = await supabase
+      let { data: spotifyTokenData, error: tokenError } = await supabase
         .from('spotify_tokens')
         .select('access_token')
         .eq('user_id', currentSession.user.id)
         .single();
 
-      if (tokenError || !spotifyTokenData?.access_token) {
-        console.error('Failed to retrieve Spotify access token from DB:', tokenError?.message);
-        setError('Failed to retrieve Spotify access token. Please log in again.');
+      if ((tokenError || !spotifyTokenData) && currentSession.provider_token && currentSession.provider_refresh_token) {
+        console.warn("Tokens not found in DB. Attempting to insert from session as a fallback.");
+        
+        spotifyTokenData = { access_token: currentSession.provider_token };
+
+        supabase
+          .from('spotify_tokens')
+          .insert({
+            user_id: currentSession.user.id,
+            access_token: currentSession.provider_token,
+            refresh_token: currentSession.provider_refresh_token,
+            expires_at: new Date(currentSession.expires_at! * 1000).toISOString(),
+          })
+          .then(({ error: insertError }) => {
+            if (insertError) console.error("Fallback token insert failed:", insertError.message);
+            else console.log("Fallback token insert successful.");
+          });
+      }
+
+      const latestAccessToken = spotifyTokenData?.access_token;
+
+      if (!latestAccessToken) {
+        console.error('Failed to retrieve Spotify access token from DB or session.');
+        setError('Could not initialize Spotify connection. Please try logging in again.');
         await supabase.auth.signOut();
         return;
       }
 
-      const latestAccessToken = spotifyTokenData.access_token;
-      const api = new SpotifyAPI(latestAccessToken, supabase); // Pass supabase client here
+      const api = new SpotifyAPI(latestAccessToken, supabase);
       setSpotifyApi(api);
       await fetchData(api);
     };
@@ -98,9 +118,6 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Failed to fetch Spotify data:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-      if (err instanceof Error && err.message.includes('Session expired')) {
-        // The API client now handles sign out, so we just show the error.
-      }
     } finally {
       setLoading(false);
     }
@@ -116,7 +133,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   if (loading && !user && !error) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center text-white">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary-500"></div>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div>
         <p className="mt-4 text-lg">Connecting to Spotify...</p>
       </div>
     );
@@ -141,9 +158,9 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   return (
     <SpotifyContext.Provider value={contextValue}>
       <PushNotificationManager />
-      <div className="h-screen bg-gray-950 lg:p-4 lg:flex lg:gap-4 pb-20">
+      <div className="h-screen lg:p-4 lg:flex lg:gap-4 pb-20 lg:pb-4">
         {/* Desktop Sidebar */}
-        <div className="hidden lg:block w-72 flex-shrink-0">
+        <div className="hidden lg:block w-72 flex-shrink-0 h-full">
           <Sidebar 
             onPlaylistClick={(p) => router.push(`/dashboard?playlist_id=${p.id}`)}
             selectedPlaylistId={playlistId}
@@ -178,9 +195,9 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
           )}
         </AnimatePresence>
 
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden h-full">
           <MobileHeader onMenuClick={() => setIsSidebarOpen(true)} />
-          <main className={`flex-1 flex flex-col relative bg-gray-900/70 backdrop-blur-lg lg:rounded-2xl lg:border lg:border-white/10 p-4 sm:p-6 ${isSidebarOpen ? 'overflow-y-hidden lg:overflow-y-auto' : 'overflow-y-auto'}`}>
+          <main className={`flex-1 flex flex-col relative bg-black/30 backdrop-blur-xl lg:rounded-2xl lg:border lg:border-white/10 p-4 sm:p-6 overflow-y-auto`}>
             {children}
           </main>
         </div>
@@ -194,7 +211,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   return (
     <Suspense fallback={
       <div className="flex min-h-screen flex-col items-center justify-center text-white">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary-500"></div>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div>
         <p className="mt-4 text-lg">Loading App...</p>
       </div>
     }>

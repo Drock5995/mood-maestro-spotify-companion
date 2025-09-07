@@ -80,10 +80,11 @@ export const CommunityPlaylistCard = ({ playlist, index, onClick }: CommunityPla
   return (
     <motion.button
       onClick={onClick}
-      className="relative rounded-2xl overflow-hidden group text-left w-full"
+      className="relative rounded-xl overflow-hidden group text-left w-full bg-white/5 border border-white/10"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
+      whileHover={{ y: -5, scale: 1.03, boxShadow: '0 10px 20px rgba(0,0,0,0.2)' }}
       aria-label={`View community playlist: ${playlist.playlist_name} by ${ownerName}`}
     >
       <Image 
@@ -91,11 +92,11 @@ export const CommunityPlaylistCard = ({ playlist, index, onClick }: CommunityPla
         alt={`Cover for ${playlist.playlist_name}`} 
         width={500} 
         height={500} 
-        className="w-full h-full object-cover aspect-square bg-gray-800 group-hover:scale-105 transition-transform duration-300" 
+        className="w-full h-full object-cover aspect-square bg-gray-800 group-hover:brightness-50 transition-all duration-300" 
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
       <div className="absolute bottom-0 left-0 p-4 text-white w-full">
-        <h3 className="text-xl font-bold truncate">{playlist.playlist_name}</h3>
+        <h3 className="text-lg font-bold truncate">{playlist.playlist_name}</h3>
         <div className="flex items-center justify-between mt-2">
           <Link 
             href={`/profile/${playlist.user_id}`} 
@@ -114,7 +115,7 @@ export const CommunityPlaylistCard = ({ playlist, index, onClick }: CommunityPla
           </Link>
           <button 
             onClick={handleLike} 
-            className="flex items-center space-x-1 bg-black/50 px-2 py-1 rounded-full transition-colors hover:bg-black/70 flex-shrink-0"
+            className="flex items-center space-x-1.5 bg-black/50 px-2.5 py-1 rounded-full transition-colors hover:bg-black/70 flex-shrink-0"
             aria-label={isLiked ? `Unlike playlist. Current likes: ${likeCount}` : `Like playlist. Current likes: ${likeCount}`}
             aria-pressed={isLiked}
           >
