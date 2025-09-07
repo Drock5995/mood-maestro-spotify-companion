@@ -52,7 +52,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
       }
 
       const latestAccessToken = spotifyTokenData.access_token;
-      const api = new SpotifyAPI(latestAccessToken);
+      const api = new SpotifyAPI(latestAccessToken, supabase); // Pass supabase client here
       setSpotifyApi(api);
       await fetchData(api);
     };
@@ -98,9 +98,8 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Failed to fetch Spotify data:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-      if (err instanceof Error && err.message === 'Token expired') {
-        setSpotifyApi(null);
-        await supabase.auth.signOut();
+      if (err instanceof Error && err.message.includes('Session expired')) {
+        // The API client now handles sign out, so we just show the error.
       }
     } finally {
       setLoading(false);
@@ -128,8 +127,8 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen flex-col items-center justify-center p-4 text-white">
         <h1 className="text-3xl font-bold mb-4 text-red-400">Error</h1>
         <p className="text-lg mb-6 text-red-300">{error}</p>
-        <button onClick={() => supabase.auth.signOut()} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full transition duration-300 ease-in-out">
-          Try Logging In Again
+        <button onClick={() => router.push('/login')} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full transition duration-300 ease-in-out">
+          Return to Login
         </button>
       </div>
     );

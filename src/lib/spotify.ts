@@ -1,3 +1,5 @@
+import { SupabaseClient } from '@supabase/supabase-js';
+
 export interface SpotifyUser {
   id: string;
   display_name: string;
@@ -78,22 +80,49 @@ const SPOTIFY_BASE_URL = 'https://api.spotify.com/v1';
 
 export class SpotifyAPI {
   private accessToken: string | null = null;
+  private supabase: SupabaseClient | null = null;
+  private isRefreshing = false;
+  private refreshPromise: Promise<string> | null = null;
 
-  constructor(initialAccessToken: string | null) { // Changed to explicitly require token
+  constructor(initialAccessToken: string | null, supabaseClient?: SupabaseClient) {
     this.accessToken = initialAccessToken;
+    if (supabaseClient) {
+      this.supabase = supabaseClient;
+    }
+  }
+
+  setSupabaseClient(client: SupabaseClient) {
+    this.supabase = client;
   }
 
   setAccessToken(token: string) {
     this.accessToken = token;
-    // localStorage is now managed by SpotifyContext, not directly by SpotifyAPI
   }
 
-  clearTokens() {
-    this.accessToken = null;
-    // localStorage is now managed by SpotifyContext, not directly by SpotifyAPI
+  private async refreshToken(): Promise<string> {
+    if (!this.supabase) {
+      throw new Error("Supabase client not set for token refresh.");
+    }
+    if (!this.isRefreshing) {
+      this.isRefreshing = true;
+      this.refreshPromise = (async () => {
+        try {
+          const { data, error } = await this.supabase!.functions.invoke('refresh-spotify-token');
+          if (error) throw error;
+          if (!data.access_token) throw new Error("No access token returned from refresh function.");
+          
+          this.setAccessToken(data.access_token);
+          return data.access_token;
+        } finally {
+          this.isRefreshing = false;
+          this.refreshPromise = null;
+        }
+      })();
+    }
+    return this.refreshPromise!;
   }
 
-  private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  private async makeRequest<T>(endpoint: string, options?: RequestInit, isRetry = false): Promise<T> {
     if (!this.accessToken) {
       throw new Error('No access token available');
     }
@@ -108,18 +137,26 @@ export class SpotifyAPI {
     });
 
     if (!response.ok) {
-      const errorBody = await response.json();
+      const errorBody = await response.json().catch(() => ({}));
       console.error("Spotify API Error:", errorBody);
 
-      // Treat 401 Unauthorized and 403 Forbidden as token issues
-      if (response.status === 401 || response.status === 403) {
-        this.clearTokens();
-        throw new Error('Token expired'); // This will trigger re-authentication in the layout
+      if ((response.status === 401 || response.status === 403) && !isRetry) {
+        console.log("Token expired, attempting to refresh...");
+        try {
+          await this.refreshToken();
+          console.log("Token refreshed, retrying original request.");
+          return this.makeRequest(endpoint, options, true);
+        } catch (refreshError) {
+          console.error("Failed to refresh token:", refreshError);
+          if (this.supabase) {
+            await this.supabase.auth.signOut();
+          }
+          throw new Error('Session expired. Please log in again.');
+        }
       }
       throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
     }
 
-    // Handle cases where response might be empty
     const text = await response.text();
     return text ? JSON.parse(text) : ({} as T);
   }
@@ -131,10 +168,7 @@ export class SpotifyAPI {
   async getUserPlaylists(): Promise<SpotifyPlaylist[]> {
     const response = await this.makeRequest<{
       items: SpotifyPlaylist[];
-      next: string | null;
-      total: number;
     }>('/me/playlists?limit=50');
-    
     return response.items;
   }
 
@@ -146,60 +180,36 @@ export class SpotifyAPI {
     const response = await this.makeRequest<{
       items: Array<{ track: SpotifyTrack | null }>;
     }>(`/playlists/${playlistId}/tracks?limit=100&fields=items(track(id,name,artists(id,name),album(id,name,images,release_date),uri,preview_url,popularity,explicit,duration_ms))`);
-    
-    return response.items
-      .map(item => item.track)
-      .filter((track): track is SpotifyTrack => track !== null);
+    return response.items.map(item => item.track).filter((track): track is SpotifyTrack => track !== null);
   }
 
   async getSeveralArtists(artistIds: string[]): Promise<SpotifyArtist[]> {
-    if (artistIds.length === 0) {
-      return [];
-    }
-    // Spotify API limit is 50 artists per request
-    const response = await this.makeRequest<{ artists: SpotifyArtist[] }>(
-      `/artists?ids=${artistIds.slice(0, 50).join(',')}`
-    );
+    if (artistIds.length === 0) return [];
+    const response = await this.makeRequest<{ artists: SpotifyArtist[] }>(`/artists?ids=${artistIds.slice(0, 50).join(',')}`);
     return response.artists.filter(artist => artist !== null);
   }
 
   async getAudioFeaturesForTracks(trackIds: string[]): Promise<SpotifyAudioFeatures[]> {
     if (trackIds.length === 0) return [];
-    // Spotify API limit is 100 track IDs per request
-    const response = await this.makeRequest<{ audio_features: SpotifyAudioFeatures[] }>(
-      `/audio-features?ids=${trackIds.slice(0, 100).join(',')}`
-    );
+    const response = await this.makeRequest<{ audio_features: SpotifyAudioFeatures[] }>(`/audio-features?ids=${trackIds.slice(0, 100).join(',')}`);
     return response.audio_features.filter(features => features !== null);
   }
 
   async getUserTopArtists(limit: number = 5): Promise<SpotifyArtist[]> {
-    const response = await this.makeRequest<{
-      items: SpotifyArtist[];
-      next: string | null;
-      total: number;
-    }>(`/me/top/artists?limit=${limit}&time_range=medium_term`);
+    const response = await this.makeRequest<{ items: SpotifyArtist[] }>(`/me/top/artists?limit=${limit}&time_range=medium_term`);
     return response.items;
   }
 
   async searchTracks(query: string, limit: number = 10): Promise<SpotifyTrack[]> {
     if (!query.trim()) return [];
-    const response = await this.makeRequest<{
-      tracks: {
-        items: SpotifyTrack[];
-      };
-    }>(`/search?q=${encodeURIComponent(query)}&type=track&limit=${limit}`);
+    const response = await this.makeRequest<{ tracks: { items: SpotifyTrack[] } }>(`/search?q=${encodeURIComponent(query)}&type=track&limit=${limit}`);
     return response.tracks.items;
   }
 
   async addTrackToPlaylist(playlistId: string, trackUri: string): Promise<{ snapshot_id: string }> {
-    return this.makeRequest<{ snapshot_id: string }>(
-      `/playlists/${playlistId}/tracks`,
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          uris: [trackUri],
-        }),
-      }
-    );
+    return this.makeRequest<{ snapshot_id: string }>(`/playlists/${playlistId}/tracks`, {
+      method: 'POST',
+      body: JSON.stringify({ uris: [trackUri] }),
+    });
   }
 }
