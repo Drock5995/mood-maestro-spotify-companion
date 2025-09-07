@@ -32,9 +32,6 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleAuthStateChange = async (_event: string, currentSession: Session | null) => {
       setSession(currentSession);
-      console.log('Auth state changed. Current session:', currentSession); // Debugging log
-      console.log('Provider token:', currentSession?.provider_token); // Debugging log
-
       if (currentSession?.provider_token) {
         const api = new SpotifyAPI(currentSession.provider_token);
         setSpotifyApi(api);
@@ -51,9 +48,6 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
-      console.log('Initial session check. Session:', initialSession); // Debugging log
-      console.log('Initial provider token:', initialSession?.provider_token); // Debugging log
-
       if (initialSession) {
         setSession(initialSession);
         if (initialSession.provider_token) {

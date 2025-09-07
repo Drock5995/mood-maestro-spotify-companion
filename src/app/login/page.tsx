@@ -25,6 +25,7 @@ export default function LoginPage() {
           'playlist-modify-public',
           'playlist-modify-private',
           'user-read-playback-state',
+          'user-read-recently-played', // Added this scope
         ].join(' '),
         redirectTo: redirectTo,
       },
@@ -54,14 +55,14 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-full bg-gray-950 -z-10"> {/* Adjusted background */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-600/20 rounded-full filter blur-3xl animate-blob"></div> {/* Using primary color, softer blur */}
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-600/20 rounded-full filter blur-3xl animate-blob animation-delay-2000"></div> {/* Softer blur */}
+      <div className="absolute top-0 left-0 w-full h-full bg-gray-950 -z-10">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-600/20 rounded-full filter blur-3xl animate-blob"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-600/20 rounded-full filter blur-3xl animate-blob animation-delay-2000"></div>
       </div>
 
-      <div className="text-center p-8 sm:p-12 bg-gray-800/60 backdrop-blur-xl rounded-2xl shadow-2xl max-w-lg w-full border border-white/10"> {/* Adjusted background */}
+      <div className="text-center p-8 sm:p-12 bg-gray-800/60 backdrop-blur-xl rounded-2xl shadow-2xl max-w-lg w-full border border-white/10">
         <div className="flex justify-center items-center mb-6">
-          <Music className="w-12 h-12 text-primary-400" aria-hidden="true" /> {/* Using primary color */}
+          <Music className="w-12 h-12 text-primary-400" aria-hidden="true" />
           <h1 className="text-4xl sm:text-5xl font-extrabold ml-4 text-white tracking-tight">
             VibeSphere
           </h1>
@@ -71,7 +72,7 @@ export default function LoginPage() {
         </p>
         <button
           onClick={handleLogin}
-          className="bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-8 rounded-full text-xl transition-all duration-300 ease-in-out transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 focus-visible:ring-opacity-70 shadow-lg" // Using primary color
+          className="bg-primary-600 hover:bg-primary-700 text-white font-bold py-3 px-8 rounded-full text-xl transition-all duration-300 ease-in-out transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-500 focus-visible:ring-opacity-70 shadow-lg"
           aria-label="Connect with Spotify to log in"
         >
           Connect with Spotify
