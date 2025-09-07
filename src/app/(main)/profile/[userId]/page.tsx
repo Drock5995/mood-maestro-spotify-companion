@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { User, Music, UserPlus, UserCheck, UserX, Loader2, MessageCircle } from 'lucide-react';
+import { User, Music, UserPlus, UserCheck, UserX, Loader2, MessageCircle, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CommunityPlaylistCard, SharedPlaylist } from '@/components/CommunityPlaylistCard';
 import { useSpotify } from '@/context/SpotifyContext';
 import toast from 'react-hot-toast';
+import ProfileEditForm from '@/components/ProfileEditForm'; // Import the new component
 
 interface Profile {
   display_name: string | null;
@@ -32,6 +33,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [friendship, setFriendship] = useState<Friendship | null>(null);
   const [loadingFriendship, setLoadingFriendship] = useState(true);
+  const [isEditing, setIsEditing] = useState(false); // New state for edit mode
 
   const isMyProfile = session?.user?.id === userId;
 
@@ -125,6 +127,11 @@ export default function ProfilePage() {
     }
   };
 
+  const handleProfileSave = (newDisplayName: string, newAvatarUrl: string | null) => {
+    setProfile(prev => prev ? { ...prev, display_name: newDisplayName, avatar_url: newAvatarUrl } : null);
+    setIsEditing(false);
+  };
+
   const renderFriendButton = () => {
     if (loadingFriendship) {
       return <div className="w-36 h-10 flex justify-center items-center"><Loader2 className="animate-spin" /></div>;
@@ -152,7 +159,17 @@ export default function ProfilePage() {
   };
 
   const renderActionButtons = () => {
-    if (isMyProfile) return null;
+    if (isMyProfile) {
+      return (
+        <button 
+          onClick={() => setIsEditing(true)} 
+          className="flex items-center justify-center space-x-2 px-4 py-2 rounded-full font-semibold transition-all duration-300 w-40 text-sm bg-white/10 hover:bg-white/20 text-white"
+        >
+          <Edit size={16} />
+          <span>Edit Profile</span>
+        </button>
+      );
+    }
 
     return (
       <div className="flex items-center gap-2">
@@ -191,26 +208,36 @@ export default function ProfilePage() {
           {renderActionButtons()}
         </div>
       </header>
-      <div className="flex-1 overflow-y-auto pr-2">
-        {playlists.length === 0 ? (
-          <div className="text-center py-16 flex flex-col items-center">
-            <Music className="w-12 h-12 text-gray-600 mb-4" />
-            <h3 className="text-2xl font-bold text-gray-400">No Playlists Shared Yet</h3>
-            <p className="text-gray-500 mt-2">This user hasn't shared any playlists with the community.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {playlists.map((p, index) => (
-              <CommunityPlaylistCard 
-                key={p.id} 
-                playlist={p} 
-                index={index} 
-                onClick={() => router.push(`/community?shared_id=${p.id}`)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+
+      {isEditing && isMyProfile && profile ? (
+        <ProfileEditForm
+          currentDisplayName={profile.display_name}
+          currentAvatarUrl={profile.avatar_url}
+          onSave={handleProfileSave}
+          onCancel={() => setIsEditing(false)}
+        />
+      ) : (
+        <div className="flex-1 overflow-y-auto pr-2">
+          {playlists.length === 0 ? (
+            <div className="text-center py-16 flex flex-col items-center">
+              <Music className="w-12 h-12 text-gray-600 mb-4" />
+              <h3 className="text-2xl font-bold text-gray-400">No Playlists Shared Yet</h3>
+              <p className="text-gray-500 mt-2">This user hasn't shared any playlists with the community.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+              {playlists.map((p, index) => (
+                <CommunityPlaylistCard 
+                  key={p.id} 
+                  playlist={p} 
+                  index={index} 
+                  onClick={() => router.push(`/community?shared_id=${p.id}`)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 }
