@@ -8,6 +8,7 @@ import { CommunityPlaylistCard, SharedPlaylist } from '@/components/CommunityPla
 import { useSpotify } from '@/context/SpotifyContext';
 import { SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
 import PlaylistDetailView from '@/components/PlaylistDetailView';
+import UserSearch from '@/components/UserSearch';
 
 function CommunityPageContent() {
   const router = useRouter();
@@ -119,11 +120,14 @@ function CommunityPageContent() {
 
   return (
     <>
-      <header className="mb-6 px-2">
-        <h1 className="text-4xl font-extrabold text-white">
-          Community <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">Playlists</span>
-        </h1>
-        <p className="text-gray-400 mt-2">Discover what others are listening to.</p>
+      <header className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 px-2">
+        <div>
+          <h1 className="text-4xl font-extrabold text-white">
+            Community <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">Playlists</span>
+          </h1>
+          <p className="text-gray-400 mt-2">Discover what others are listening to, or find a specific user.</p>
+        </div>
+        <UserSearch />
       </header>
       <div className={`flex-1 pr-2 relative ${selectedPlaylist ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
         {playlists.length === 0 ? (
