@@ -37,3 +37,10 @@ body {
 .animation-delay-2000 {
   animation-delay: 2s;
 }
+
+/* Global focus-visible style for accessibility */
+*:focus-visible {
+  outline: 2px solid theme(colors.purple.500);
+  outline-offset: 2px;
+  border-radius: 4px; /* Adjust as needed for component shapes */
+}

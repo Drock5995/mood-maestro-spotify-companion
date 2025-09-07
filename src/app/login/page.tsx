@@ -60,7 +60,7 @@ export default function LoginPage() {
 
       <div className="text-center p-8 sm:p-12 bg-black/40 backdrop-blur-xl rounded-2xl shadow-2xl max-w-lg w-full border border-white/10">
         <div className="flex justify-center items-center mb-6">
-          <Music className="w-12 h-12 text-purple-400" />
+          <Music className="w-12 h-12 text-purple-400" aria-hidden="true" />
           <h1 className="text-4xl sm:text-5xl font-extrabold ml-4 text-white tracking-tight">
             VibeSphere
           </h1>
@@ -71,6 +71,7 @@ export default function LoginPage() {
         <button
           onClick={handleLogin}
           className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-8 rounded-full text-xl transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500 focus:ring-opacity-70 shadow-lg"
+          aria-label="Connect with Spotify to log in"
         >
           Connect with Spotify
         </button>

@@ -84,18 +84,41 @@ export const CommunityPlaylistCard = ({ playlist, index, onClick }: CommunityPla
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: index * 0.1 }}
+      aria-label={`View community playlist: ${playlist.playlist_name} by ${ownerName}`}
     >
-      <Image src={playlist.playlist_cover_url || '/default-cover.png'} alt={playlist.playlist_name} width={500} height={500} className="w-full h-full object-cover aspect-square bg-gray-800 group-hover:scale-105 transition-transform duration-300" />
+      <Image 
+        src={playlist.playlist_cover_url || '/default-cover.png'} 
+        alt={`Cover for ${playlist.playlist_name}`} 
+        width={500} 
+        height={500} 
+        className="w-full h-full object-cover aspect-square bg-gray-800 group-hover:scale-105 transition-transform duration-300" 
+      />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
       <div className="absolute bottom-0 left-0 p-4 text-white w-full">
         <h3 className="text-xl font-bold truncate">{playlist.playlist_name}</h3>
         <div className="flex items-center justify-between mt-2">
-          <Link href={`/profile/${playlist.user_id}`} onClick={(e) => e.stopPropagation()} className="flex items-center space-x-2 min-w-0 group/profile">
-            <Image src={ownerAvatar} alt={ownerName} width={24} height={24} className="rounded-full flex-shrink-0" />
+          <Link 
+            href={`/profile/${playlist.user_id}`} 
+            onClick={(e) => e.stopPropagation()} 
+            className="flex items-center space-x-2 min-w-0 group/profile"
+            aria-label={`View profile of ${ownerName}`}
+          >
+            <Image 
+              src={ownerAvatar} 
+              alt={`${ownerName}'s avatar`} 
+              width={24} 
+              height={24} 
+              className="rounded-full flex-shrink-0" 
+            />
             <span className="text-sm font-medium truncate group-hover/profile:underline">{ownerName}</span>
           </Link>
-          <button onClick={handleLike} className="flex items-center space-x-1 bg-black/50 px-2 py-1 rounded-full transition-colors hover:bg-black/70 flex-shrink-0">
-            <Heart className={`w-4 h-4 transition-all ${isLiked ? 'text-pink-500 fill-current' : 'text-pink-400'}`} />
+          <button 
+            onClick={handleLike} 
+            className="flex items-center space-x-1 bg-black/50 px-2 py-1 rounded-full transition-colors hover:bg-black/70 flex-shrink-0"
+            aria-label={isLiked ? `Unlike playlist. Current likes: ${likeCount}` : `Like playlist. Current likes: ${likeCount}`}
+            aria-pressed={isLiked}
+          >
+            <Heart className={`w-4 h-4 transition-all ${isLiked ? 'text-pink-500 fill-current' : 'text-pink-400'}`} aria-hidden="true" />
             <span className="text-white font-semibold text-sm">{likeCount}</span>
           </button>
         </div>

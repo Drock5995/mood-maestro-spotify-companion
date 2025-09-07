@@ -89,12 +89,12 @@ export default function SuggestionManager({ sharedPlaylistId, spotifyPlaylistId 
   };
 
   if (loading) {
-    return <div className="text-center p-8">Loading suggestions...</div>;
+    return <div className="text-center p-8" role="status">Loading suggestions...</div>;
   }
 
   if (suggestions.length === 0) {
     return (
-      <div className="text-center py-16">
+      <div className="text-center py-16" role="status">
         <h3 className="text-2xl font-bold text-gray-400">No Suggestions Yet</h3>
         <p className="text-gray-500 mt-2">When users suggest songs, they will appear here for your review.</p>
       </div>
@@ -102,17 +102,17 @@ export default function SuggestionManager({ sharedPlaylistId, spotifyPlaylistId 
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" aria-label="Song Suggestions List">
       {suggestions.map(s => (
-        <div key={s.id} className="flex items-center p-3 bg-white/5 rounded-lg">
-          <Image src={s.spotify_album_cover_url || ''} alt={s.spotify_track_name} width={48} height={48} className="rounded mr-4" />
+        <div key={s.id} className="flex items-center p-3 bg-white/5 rounded-lg" role="listitem">
+          <Image src={s.spotify_album_cover_url || '/default-album-cover.png'} alt={`Album cover for ${s.spotify_track_name}`} width={48} height={48} className="rounded mr-4" />
           <div className="flex-grow min-w-0">
             <p className="font-semibold truncate">{s.spotify_track_name}</p>
             <p className="text-sm text-gray-400 truncate">{s.spotify_artist_name}</p>
             <div className="flex items-center space-x-2 text-xs text-gray-500 mt-1">
               <span>Suggested by</span>
-              <Link href={`/profile/${s.suggester_user_id}`} className="flex items-center space-x-1 hover:underline">
-                <Image src={s.profiles?.avatar_url || ''} alt={s.profiles?.display_name || 'user'} width={16} height={16} className="rounded-full" />
+              <Link href={`/profile/${s.suggester_user_id}`} className="flex items-center space-x-1 hover:underline" aria-label={`View profile of ${s.profiles?.display_name || 'user'}`}>
+                <Image src={s.profiles?.avatar_url || `https://i.pravatar.cc/16?u=${s.suggester_user_id}`} alt={`${s.profiles?.display_name || 'user'}'s avatar`} width={16} height={16} className="rounded-full" />
                 <span>{s.profiles?.display_name}</span>
               </Link>
             </div>
@@ -120,14 +120,26 @@ export default function SuggestionManager({ sharedPlaylistId, spotifyPlaylistId 
           <div className="flex items-center space-x-2 ml-4">
             {s.status === 'pending' ? (
               <>
-                <button onClick={() => handleSuggestion(s, 'accepted')} className="p-2 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/40 transition-colors"><Check size={18} /></button>
-                <button onClick={() => handleSuggestion(s, 'rejected')} className="p-2 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/40 transition-colors"><X size={18} /></button>
+                <button 
+                  onClick={() => handleSuggestion(s, 'accepted')} 
+                  className="p-2 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/40 transition-colors"
+                  aria-label={`Accept suggestion for ${s.spotify_track_name}`}
+                >
+                  <Check size={18} aria-hidden="true" />
+                </button>
+                <button 
+                  onClick={() => handleSuggestion(s, 'rejected')} 
+                  className="p-2 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/40 transition-colors"
+                  aria-label={`Reject suggestion for ${s.spotify_track_name}`}
+                >
+                  <X size={18} aria-hidden="true" />
+                </button>
               </>
             ) : (
               <div className={`flex items-center space-x-2 text-sm font-semibold px-3 py-1 rounded-full ${
                 s.status === 'accepted' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
-              }`}>
-                {s.status === 'accepted' ? <Check size={14} /> : <X size={14} />}
+              }`} role="status">
+                {s.status === 'accepted' ? <Check size={14} aria-hidden="true" /> : <X size={14} aria-hidden="true" />}
                 <span>{s.status.charAt(0).toUpperCase() + s.status.slice(1)}</span>
               </div>
             )}

@@ -19,6 +19,7 @@ export default function SongSuggester({ sharedPlaylistId }: SongSuggesterProps) 
   const [searchResults, setSearchResults] = useState<SpotifyTrack[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
+  const searchResultsId = 'song-search-results';
 
   useEffect(() => {
     const search = async () => {
@@ -65,24 +66,29 @@ export default function SongSuggester({ sharedPlaylistId }: SongSuggesterProps) 
   };
 
   return (
-    <div className="bg-white/5 p-4 rounded-lg mb-6">
+    <div className="bg-white/5 p-4 rounded-lg mb-6" aria-label="Suggest a Song">
       <h3 className="text-xl font-bold mb-4">Suggest a Song</h3>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden="true" />
         <input
           type="text"
           placeholder="Search for a track..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all w-full"
+          aria-label="Search for a track to suggest"
+          aria-autocomplete="list"
+          aria-controls={searchResultsId}
+          aria-expanded={searchResults.length > 0}
+          role="combobox"
         />
       </div>
-      {isSearching && <p className="text-center mt-4 text-gray-400">Searching...</p>}
+      {isSearching && <p className="text-center mt-4 text-gray-400" role="status">Searching...</p>}
       {searchResults.length > 0 && (
-        <ul className="mt-4 space-y-2">
+        <ul id={searchResultsId} className="mt-4 space-y-2" role="listbox">
           {searchResults.map(track => (
-            <li key={track.id} className="flex items-center p-2 bg-white/5 rounded-md">
-              <Image src={track.album.images[0].url} alt={track.name} width={40} height={40} className="rounded mr-3" />
+            <li key={track.id} className="flex items-center p-2 bg-white/5 rounded-md" role="option" aria-label={`Track: ${track.name} by ${track.artists.map(a => a.name).join(', ')}`}>
+              <Image src={track.album.images[0].url} alt={`Album cover for ${track.name}`} width={40} height={40} className="rounded mr-3" />
               <div className="flex-grow min-w-0">
                 <p className="font-semibold truncate">{track.name}</p>
                 <p className="text-sm text-gray-400 truncate">{track.artists.map(a => a.name).join(', ')}</p>
@@ -90,9 +96,10 @@ export default function SongSuggester({ sharedPlaylistId }: SongSuggesterProps) 
               <button
                 onClick={() => handleSuggest(track)}
                 className="ml-3 p-2 text-emerald-400 hover:text-emerald-300 transition-colors"
-                title="Suggest this song"
+                title={`Suggest ${track.name} by ${track.artists.map(a => a.name).join(', ')}`}
+                aria-label={`Suggest ${track.name} by ${track.artists.map(a => a.name).join(', ')}`}
               >
-                <PlusCircle size={24} />
+                <PlusCircle size={24} aria-hidden="true" />
               </button>
             </li>
           ))}

@@ -66,15 +66,24 @@ export default function AudioPlayer({ src, onEnded }: AudioPlayerProps) {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-black/70 backdrop-blur-lg border-t border-white/10 p-3 flex items-center justify-between z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-black/70 backdrop-blur-lg border-t border-white/10 p-3 flex items-center justify-between z-50" role="group" aria-label="Audio Player">
       <audio ref={audioRef} onEnded={() => { setIsPlaying(false); if (onEnded) onEnded(); }} />
       <div className="flex items-center space-x-3">
-        <button onClick={togglePlayPause} className="p-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white transition-colors">
-          {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+        <button 
+          onClick={togglePlayPause} 
+          className="p-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+          aria-label={isPlaying ? "Pause track preview" : "Play track preview"}
+        >
+          {isPlaying ? <Pause size={20} aria-hidden="true" /> : <Play size={20} aria-hidden="true" />}
         </button>
         <div className="flex items-center space-x-2">
-          <button onClick={toggleMute} className="text-gray-300 hover:text-white">
-            {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
+          <button 
+            onClick={toggleMute} 
+            className="text-gray-300 hover:text-white"
+            aria-label={isMuted || volume === 0 ? "Unmute" : "Mute"}
+            aria-pressed={isMuted}
+          >
+            {isMuted || volume === 0 ? <VolumeX size={20} aria-hidden="true" /> : <Volume2 size={20} aria-hidden="true" />}
           </button>
           <input
             type="range"
@@ -84,6 +93,11 @@ export default function AudioPlayer({ src, onEnded }: AudioPlayerProps) {
             value={isMuted ? 0 : volume}
             onChange={handleVolumeChange}
             className="w-24 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+            aria-label="Volume slider"
+            aria-valuemin={0}
+            aria-valuemax={1}
+            aria-valuenow={isMuted ? 0 : volume}
+            aria-valuetext={`${Math.round((isMuted ? 0 : volume) * 100)}% volume`}
           />
         </div>
       </div>

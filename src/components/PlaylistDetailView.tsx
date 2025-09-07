@@ -201,7 +201,7 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
   const renderContent = () => {
     switch (activeTab) {
       case 'overview': return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="tabpanel" id="overview-tabpanel" aria-labelledby="overview-tab">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white/5 p-6 rounded-xl text-center"><h3 className="text-3xl sm:text-4xl font-bold">{tracks.length}</h3><p className="text-gray-400">Songs</p></div>
             <div className="bg-white/5 p-6 rounded-xl text-center"><h3 className="text-3xl sm:text-4xl font-bold">{analysis?.totalDuration}</h3><p className="text-gray-400">Total Duration</p></div>
@@ -210,7 +210,7 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <div className="bg-white/5 p-6 rounded-xl">
               <h3 className="text-2xl font-bold mb-4">Top Genres</h3>
-              <div style={{ width: '100%', height: 300 }}>
+              <div style={{ width: '100%', height: 300 }} aria-label="Top Genres Chart">
                 <ResponsiveContainer>
                   <BarChart data={analysis?.topGenres} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                     <XAxis type="number" hide /><YAxis type="category" dataKey="name" width={120} tick={{ fill: '#A0AEC0' }} axisLine={false} tickLine={false} />
@@ -223,7 +223,7 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
             <div className="bg-white/5 p-6 rounded-xl">
               <h3 className="text-2xl font-bold mb-4">Playlist Vibe</h3>
               {playlistAudioFeatures.length > 0 ? (
-                <div style={{ width: '100%', height: 300 }}>
+                <div style={{ width: '100%', height: 300 }} aria-label="Playlist Vibe Metrics Chart">
                   <ResponsiveContainer>
                     <BarChart data={analysis?.vibeMetrics} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
                       <XAxis type="number" hide domain={[0, 100]} />
@@ -238,8 +238,8 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400">
-                  <Sparkles className="mr-2" /> No audio features available.
+                <div className="flex items-center justify-center h-full text-gray-400" role="status">
+                  <Sparkles className="mr-2" aria-hidden="true" /> No audio features available.
                 </div>
               )}
             </div>
@@ -247,19 +247,19 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
           {playlistAudioFeatures.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
               <div className="bg-white/5 p-6 rounded-xl flex items-center space-x-4">
-                <Gauge className="w-8 h-8 text-blue-400 flex-shrink-0" />
+                <Gauge className="w-8 h-8 text-blue-400 flex-shrink-0" aria-hidden="true" />
                 <div><p className="text-gray-400 text-sm">Avg. Danceability</p><h3 className="text-2xl font-bold text-white">{analysis?.avgDanceability}%</h3></div>
               </div>
               <div className="bg-white/5 p-6 rounded-xl flex items-center space-x-4">
-                <Zap className="w-8 h-8 text-red-400 flex-shrink-0" />
+                <Zap className="w-8 h-8 text-red-400 flex-shrink-0" aria-hidden="true" />
                 <div><p className="text-gray-400 text-sm">Avg. Energy</p><h3 className="text-2xl font-bold text-white">{analysis?.avgEnergy}%</h3></div>
               </div>
               <div className="bg-white/5 p-6 rounded-xl flex items-center space-x-4">
-                <Smile className="w-8 h-8 text-emerald-400 flex-shrink-0" />
+                <Smile className="w-8 h-8 text-emerald-400 flex-shrink-0" aria-hidden="true" />
                 <div><p className="text-gray-400 text-sm">Avg. Valence</p><h3 className="text-2xl font-bold text-white">{analysis?.avgValence}%</h3></div>
               </div>
               <div className="bg-white/5 p-6 rounded-xl flex items-center space-x-4">
-                <Music className="w-8 h-8 text-purple-400 flex-shrink-0" />
+                <Music className="w-8 h-8 text-purple-400 flex-shrink-0" aria-hidden="true" />
                 <div><p className="text-gray-400 text-sm">Avg. Tempo</p><h3 className="text-2xl font-bold text-white">{analysis?.avgTempo} BPM</h3></div>
               </div>
             </div>
@@ -267,36 +267,40 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
         </motion.div>
       );
       case 'songs': return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <ul className="space-y-2">{tracks.map((track, index) => (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="tabpanel" id="songs-tabpanel" aria-labelledby="songs-tab">
+          <ul className="space-y-2" aria-label="Playlist tracks">{tracks.map((track, index) => (
             <li key={track.id + index} className="flex items-center p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
-              <span className="w-8 text-gray-400">{index + 1}</span>
-              <Image src={track.album.images[0].url} alt={track.album.name} width={40} height={40} className="rounded mr-4" />
-              <div className="flex-grow min-w-0"><p className="font-semibold truncate">{track.name}</p><p className="text-sm text-gray-400 truncate">{track.artists.map(a => a.name).join(', ')}</p></div>
-              <span className="text-sm text-gray-400 ml-2">{formatDuration(track.duration_ms)}</span>
+              <span className="w-8 text-gray-400" aria-hidden="true">{index + 1}</span>
+              <Image src={track.album.images[0].url} alt={`Album cover for ${track.name}`} width={40} height={40} className="rounded mr-4" />
+              <div className="flex-grow min-w-0">
+                <p className="font-semibold truncate">{track.name}</p>
+                <p className="text-sm text-gray-400 truncate">{track.artists.map(a => a.name).join(', ')}</p>
+              </div>
+              <span className="text-sm text-gray-400 ml-2" aria-hidden="true">{formatDuration(track.duration_ms)}</span>
               <button
                 onClick={() => handleTrackPlayToggle(track)}
                 className={`ml-4 p-2 rounded-full transition-colors ${track.preview_url ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-gray-700 text-gray-400 cursor-not-allowed'}`}
                 disabled={!track.preview_url}
-                title={track.preview_url ? "Play preview" : "No preview available"}
+                title={track.preview_url ? (currentPlayingTrackId === track.id ? `Pause preview for ${track.name}` : `Play preview for ${track.name}`) : `No preview available for ${track.name}`}
+                aria-label={track.preview_url ? (currentPlayingTrackId === track.id ? `Pause preview for ${track.name}` : `Play preview for ${track.name}`) : `No preview available for ${track.name}`}
               >
-                {currentPlayingTrackId === track.id ? <Pause size={16} /> : <Play size={16} />}
+                {currentPlayingTrackId === track.id ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
               </button>
             </li>
           ))}</ul>
         </motion.div>
       );
       case 'social': return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col h-full">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col h-full" role="tabpanel" id="social-tabpanel" aria-labelledby="social-tab">
           {!isShared ? (
-            <div className="text-center py-16 flex-1 flex flex-col justify-center items-center">
-              <Share2 className="w-12 h-12 text-gray-600 mb-4" />
+            <div className="text-center py-16 flex-1 flex flex-col justify-center items-center" role="status">
+              <Share2 className="w-12 h-12 text-gray-600 mb-4" aria-hidden="true" />
               <h3 className="text-2xl font-bold text-gray-400">This Playlist Isn&apos;t Shared</h3>
               <p className="text-gray-500 mt-2">Share this playlist with the community to enable comments and suggestions.</p>
             </div>
           ) : (
             <>
-              <div className="flex-1 overflow-y-auto pr-2 -mr-4 mb-4">
+              <div className="flex-1 overflow-y-auto pr-2 -mr-4 mb-4" aria-live="polite" aria-atomic="false">
                 <div className="space-y-2">
                   {comments.map(comment => <CommentCard key={comment.id} comment={comment} />)}
                 </div>
@@ -310,9 +314,15 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
                   placeholder={!sharedPlaylistId ? "Loading comments..." : "Add a comment..."}
                   className="flex-1 bg-white/5 border border-white/10 rounded-full py-2 px-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
                   disabled={isSubmitting || !sharedPlaylistId}
+                  aria-label="Add a new comment"
                 />
-                <button type="submit" className="bg-purple-600 hover:bg-purple-700 rounded-full p-3 text-white transition-colors disabled:opacity-50" disabled={isSubmitting || !newComment.trim() || !sharedPlaylistId}>
-                  <Send size={20} />
+                <button 
+                  type="submit" 
+                  className="bg-purple-600 hover:bg-purple-700 rounded-full p-3 text-white transition-colors disabled:opacity-50" 
+                  disabled={isSubmitting || !newComment.trim() || !sharedPlaylistId}
+                  aria-label="Submit comment"
+                >
+                  <Send size={20} aria-hidden="true" />
                 </button>
               </form>
             </>
@@ -320,22 +330,23 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
         </motion.div>
       );
       case 'poster': return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center" role="tabpanel" id="poster-tabpanel" aria-labelledby="poster-tab">
             <p className="text-center text-gray-400 mb-4">Here&apos;s a shareable poster for your playlist!</p>
             <PlaylistPoster posterRef={posterRef} playlist={playlist} tracks={tracks} artists={artists} />
             <button
                 onClick={handleDownloadPoster}
                 className="mt-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 ease-in-out transform hover:scale-105"
+                aria-label="Download playlist poster as image"
             >
                 Download Poster
             </button>
         </motion.div>
       );
       case 'suggestions': return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} role="tabpanel" id="suggestions-tabpanel" aria-labelledby="suggestions-tab">
           {!isShared || !sharedPlaylistId ? (
-            <div className="text-center py-16">
-              <GitPullRequest className="w-12 h-12 text-gray-600 mb-4 mx-auto" />
+            <div className="text-center py-16" role="status">
+              <GitPullRequest className="w-12 h-12 text-gray-600 mb-4 mx-auto" aria-hidden="true" />
               <h3 className="text-2xl font-bold text-gray-400">Share to Get Suggestions</h3>
               <p className="text-gray-500 mt-2">You must share this playlist to the community to receive song suggestions.</p>
             </div>
@@ -360,37 +371,57 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
       initial={{ opacity: 0, x: '100%' }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: '100%' }}
       transition={{ duration: 0.5, ease: 'easeInOut' }}
       className="absolute inset-0 bg-gray-900 p-4 sm:p-6 flex flex-col"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="playlist-detail-title"
     >
       <svg width="0" height="0" style={{ position: 'absolute' }}><defs>{gradients.map((grad, index) => (
         <linearGradient id={`color${index}`} x1="0" y1="0" x2="1" y2="0" key={index}><stop offset="0%" stopColor={grad[0]} /><stop offset="100%" stopColor={grad[1]} /></linearGradient>
       ))}</defs></svg>
 
-      <button onClick={onBack} className="flex items-center space-x-2 text-gray-300 hover:text-white mb-6 self-start"><ArrowLeft /><span>{backButtonText}</span></button>
+      <button onClick={onBack} className="flex items-center space-x-2 text-gray-300 hover:text-white mb-6 self-start" aria-label={backButtonText}><ArrowLeft aria-hidden="true" /><span>{backButtonText}</span></button>
 
       <header className="flex flex-col md:flex-row items-center text-center md:text-left gap-4 md:gap-8 mb-8">
-        <Image src={playlist.images[0].url} alt={playlist.name} width={200} height={200} className="rounded-2xl shadow-2xl flex-shrink-0 w-32 h-32 sm:w-40 sm:h-40 md:w-52 md:h-52 object-cover" />
+        <Image 
+          src={playlist.images[0].url} 
+          alt={`Cover for ${playlist.name}`} 
+          width={200} 
+          height={200} 
+          className="rounded-2xl shadow-2xl flex-shrink-0 w-32 h-32 sm:w-40 sm:h-40 md:w-52 md:h-52 object-cover" 
+        />
         <div>
           <p className="text-sm font-bold text-purple-400 uppercase tracking-widest">Playlist</p>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mt-2 mb-4">{playlist.name}</h1>
+          <h1 id="playlist-detail-title" className="text-4xl sm:text-5xl md:text-6xl font-extrabold mt-2 mb-4">{playlist.name}</h1>
           <p className="text-gray-400 max-w-prose text-sm sm:text-base">{playlist.description || 'A collection of amazing tracks.'}</p>
           <button 
             onClick={onShareToggle} 
             disabled={!isOwner}
             className={`mt-4 flex items-center space-x-2 px-4 py-2 rounded-full font-semibold transition-all duration-300 ${isShared ? 'bg-emerald-500 text-white' : 'bg-white/10 hover:bg-white/20 text-white'} ${!isOwner ? 'cursor-not-allowed opacity-70' : ''}`}
+            aria-label={isShared ? 'Playlist is shared to community' : 'Share playlist to community'}
+            aria-pressed={isShared}
           >
-            {isShared ? <CheckCircle size={20} /> : <Share2 size={20} />}
+            {isShared ? <CheckCircle size={20} aria-hidden="true" /> : <Share2 size={20} aria-hidden="true" />}
             <span>{isShared ? 'Shared to Community' : 'Share to Community'}</span>
           </button>
         </div>
       </header>
 
-      <nav className="flex items-center space-x-1 sm:space-x-2 md:space-x-4 border-b border-white/10 mb-8 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto">
+      <nav className="flex items-center space-x-1 sm:space-x-2 md:space-x-4 border-b border-white/10 mb-8 -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto" role="tablist" aria-label="Playlist details tabs">
         {([
           ['overview', Music], ['songs', Users], ['social', Share2], 
           ['suggestions', GitPullRequest], ['poster', ImageIcon]
         ] as const).map(([tab, Icon]) => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`relative flex-shrink-0 flex items-center space-x-2 px-3 sm:px-4 py-3 font-semibold transition-colors ${activeTab === tab ? 'text-white' : 'text-gray-400 hover:text-white'}`}>
-            <Icon className="w-5 h-5" /><span>{tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
+          <button 
+            key={tab} 
+            id={`${tab}-tab`}
+            onClick={() => setActiveTab(tab)} 
+            className={`relative flex-shrink-0 flex items-center space-x-2 px-3 sm:px-4 py-3 font-semibold transition-colors ${activeTab === tab ? 'text-white' : 'text-gray-400 hover:text-white'}`}
+            role="tab"
+            aria-controls={`${tab}-tabpanel`}
+            aria-selected={activeTab === tab}
+            tabIndex={activeTab === tab ? 0 : -1}
+          >
+            <Icon className="w-5 h-5" aria-hidden="true" /><span>{tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
             {activeTab === tab && <motion.div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-t-full" layoutId="underline" />}
           </button>
         ))}

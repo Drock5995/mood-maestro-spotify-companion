@@ -106,7 +106,7 @@ export default function ProfileEditForm({ currentDisplayName, currentAvatarUrl, 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 p-6 bg-white/5 rounded-xl">
+    <form onSubmit={handleSubmit} className="space-y-6 p-6 bg-white/5 rounded-xl" aria-label="Edit Profile Form">
       <div>
         <label htmlFor="displayName" className="block text-sm font-medium text-gray-300 mb-2">Display Name</label>
         <input
@@ -117,10 +117,12 @@ export default function ProfileEditForm({ currentDisplayName, currentAvatarUrl, 
           className="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
           placeholder="Your display name"
           maxLength={50}
+          aria-describedby="displayNameHelp"
         />
+        <p id="displayNameHelp" className="sr-only">Enter your preferred display name, up to 50 characters.</p>
       </div>
       <div>
-        <label htmlFor="avatarUrl" className="block text-sm font-medium text-gray-300 mb-2">Avatar</label>
+        <label htmlFor="avatarUrl" className="block text-sm font-medium text-gray-300 mb-2">Avatar URL</label>
         <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-3">
           <input
             type="url"
@@ -129,10 +131,12 @@ export default function ProfileEditForm({ currentDisplayName, currentAvatarUrl, 
             onChange={(e) => setAvatarUrl(e.target.value)}
             className="flex-1 w-full sm:w-auto px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
             placeholder="https://example.com/your-avatar.jpg"
+            aria-describedby="avatarUrlHelp"
           />
+          <p id="avatarUrlHelp" className="sr-only">Enter a direct URL to your avatar image.</p>
           <div className="flex space-x-2">
-            <label htmlFor="avatar-upload" className="p-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center justify-center cursor-pointer" title="Upload your own avatar">
-              {isUploading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
+            <label htmlFor="avatar-upload" className="p-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-colors flex items-center justify-center cursor-pointer" title="Upload your own avatar" aria-label="Upload your own avatar image">
+              {isUploading ? <Loader2 className="animate-spin" size={20} aria-hidden="true" /> : <Upload size={20} aria-hidden="true" />}
               <input id="avatar-upload" type="file" accept="image/*" onChange={handleFileUpload} className="hidden" disabled={isUploading} />
             </label>
             <button
@@ -140,24 +144,26 @@ export default function ProfileEditForm({ currentDisplayName, currentAvatarUrl, 
               onClick={handleGenerateAvatar}
               className="p-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white transition-colors flex items-center justify-center"
               title="Generate a fun avatar"
+              aria-label="Generate a random fun emoji avatar"
               disabled={isUploading}
             >
-              <Sparkles size={20} />
+              <Sparkles size={20} aria-hidden="true" />
             </button>
             <button
               type="button"
               onClick={handleUseSpotifyAvatar}
               className="p-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center justify-center"
               title="Use Spotify profile picture"
+              aria-label="Use your Spotify profile picture as avatar"
               disabled={isUploading || !spotifyUser?.images?.[0]?.url}
             >
-              <Music size={20} />
+              <Music size={20} aria-hidden="true" />
             </button>
           </div>
         </div>
         {avatarUrl && (
           <div className="mt-4 flex justify-center">
-            <Image src={avatarUrl} alt="Avatar Preview" width={96} height={96} className="rounded-full object-cover border-2 border-purple-500" />
+            <Image src={avatarUrl} alt="Avatar preview" width={96} height={96} className="rounded-full object-cover border-2 border-purple-500" />
           </div>
         )}
       </div>
@@ -167,6 +173,7 @@ export default function ProfileEditForm({ currentDisplayName, currentAvatarUrl, 
           onClick={onCancel}
           className="px-5 py-2 rounded-full text-gray-300 hover:bg-white/10 transition-colors"
           disabled={isSaving || isUploading}
+          aria-label="Cancel profile editing"
         >
           Cancel
         </button>
@@ -174,8 +181,9 @@ export default function ProfileEditForm({ currentDisplayName, currentAvatarUrl, 
           type="submit"
           className="px-5 py-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           disabled={isSaving || isUploading}
+          aria-label="Save profile changes"
         >
-          {isSaving ? <Loader2 className="animate-spin mr-2" size={20} /> : null}
+          {isSaving ? <Loader2 className="animate-spin mr-2" size={20} aria-hidden="true" /> : null}
           Save Changes
         </button>
       </div>

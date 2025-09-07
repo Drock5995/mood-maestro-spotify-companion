@@ -19,12 +19,17 @@ const NavLink = ({ href, icon: Icon, label }: { href: string, icon: React.Elemen
   const isActive = pathname.startsWith(href);
 
   return (
-    <Link href={href} className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${
-      isActive 
-        ? 'bg-purple-600/30 text-white font-semibold shadow-lg' 
-        : 'text-gray-400 hover:bg-white/10 hover:text-white'
-    }`}>
-      <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-purple-300' : 'text-gray-500 group-hover:text-white'}`} />
+    <Link 
+      href={href} 
+      className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${
+        isActive 
+          ? 'bg-purple-600/30 text-white font-semibold shadow-lg' 
+          : 'text-gray-400 hover:bg-white/10 hover:text-white'
+      }`}
+      aria-current={isActive ? 'page' : undefined}
+      aria-label={label}
+    >
+      <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-purple-300' : 'text-gray-500 group-hover:text-white'}`} aria-hidden="true" />
       <span className="truncate">{label}</span>
     </Link>
   );
@@ -45,7 +50,7 @@ export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: Sidebar
             {user.images?.[0]?.url && (
               <Image
                 src={user.images[0].url}
-                alt={user.display_name || 'User'}
+                alt={`${user.display_name || 'User'}'s profile picture`}
                 width={48}
                 height={48}
                 className="rounded-full border-2 border-purple-500"
@@ -60,7 +65,7 @@ export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: Sidebar
         <FriendRequestBell />
       </div>
 
-      <nav className="flex flex-col space-y-2">
+      <nav className="flex flex-col space-y-2" aria-label="Main navigation">
         <NavLink href="/dashboard" icon={Home} label="Dashboard" />
         <NavLink href="/community" icon={Users} label="Community" />
         <NavLink href="/friends" icon={Heart} label="Matchmaker" />
@@ -70,7 +75,7 @@ export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: Sidebar
 
       <div className="border-t border-white/10 flex-grow overflow-y-auto pt-4 pr-1 -mr-2">
         <h4 className="text-gray-400 font-semibold text-sm uppercase tracking-wider px-3 mb-3">Your Playlists</h4>
-        <ul className="space-y-1">
+        <ul className="space-y-1" aria-label="Your Spotify Playlists">
           {playlists.map((playlist) => (
             <li key={playlist.id}>
               <button
@@ -80,8 +85,10 @@ export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: Sidebar
                     ? 'bg-purple-600/30 text-white font-semibold'
                     : 'text-gray-400 hover:bg-white/10 hover:text-white'
                 }`}
+                aria-current={selectedPlaylistId === playlist.id ? 'true' : undefined}
+                aria-label={`Select playlist ${playlist.name}`}
               >
-                <Music className={`w-5 h-5 flex-shrink-0 transition-colors ${selectedPlaylistId === playlist.id ? 'text-purple-300' : 'text-gray-500 group-hover:text-white'}`} />
+                <Music className={`w-5 h-5 flex-shrink-0 transition-colors ${selectedPlaylistId === playlist.id ? 'text-purple-300' : 'text-gray-500 group-hover:text-white'}`} aria-hidden="true" />
                 <span className="truncate">{playlist.name}</span>
               </button>
             </li>
@@ -93,8 +100,9 @@ export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: Sidebar
         <button
           onClick={handleLogout}
           className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-400 hover:bg-red-500/20 hover:text-red-300 transition-colors duration-200 group"
+          aria-label="Logout from VibeSphere"
         >
-          <LogOut className="w-5 h-5 text-gray-500 group-hover:text-red-300 transition-colors" />
+          <LogOut className="w-5 h-5 text-gray-500 group-hover:text-red-300 transition-colors" aria-hidden="true" />
           <span className="font-medium">Logout</span>
         </button>
       </div>
