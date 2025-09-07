@@ -24,6 +24,7 @@ export default function LoginPage() {
           'user-top-read',
           'playlist-modify-public',
           'playlist-modify-private',
+          'user-read-playback-state', // Added this scope
         ].join(' '),
         redirectTo: redirectTo,
       },
