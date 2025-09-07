@@ -137,7 +137,7 @@ export class SpotifyAPI {
     });
 
     if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
+      const errorBody = await response.json().catch(() => ({ error: { message: 'Could not parse error response from Spotify' }}));
       console.error("Spotify API Error:", errorBody);
 
       if ((response.status === 401 || response.status === 403) && !isRetry) {
@@ -148,13 +148,15 @@ export class SpotifyAPI {
           return this.makeRequest(endpoint, options, true);
         } catch (refreshError) {
           console.error("Failed to refresh token:", refreshError);
+          this.accessToken = null; // Clear invalid token
           if (this.supabase) {
             await this.supabase.auth.signOut();
           }
           throw new Error('Session expired. Please log in again.');
         }
       }
-      throw new Error(`Spotify API error: ${response.status} ${response.statusText}`);
+      const errorMessage = errorBody?.error?.message || `Spotify API error: ${response.status} ${response.statusText}`;
+      throw new Error(errorMessage);
     }
 
     const text = await response.text();
