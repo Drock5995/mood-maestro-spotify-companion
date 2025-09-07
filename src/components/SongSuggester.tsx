@@ -40,23 +40,24 @@ export default function SongSuggester({ sharedPlaylistId }: SongSuggesterProps) 
       return;
     }
 
-    const suggestionPromise = supabase
-      .from('song_suggestions')
-      .insert({
-        shared_playlist_id: sharedPlaylistId,
-        suggester_user_id: session.user.id,
-        spotify_track_id: track.id,
-        spotify_track_name: track.name,
-        spotify_artist_name: track.artists.map(a => a.name).join(', '),
-        spotify_album_cover_url: track.album.images?.[0]?.url,
-      })
-      .then(({ error }) => {
-        if (error) {
-          throw error;
-        }
-      });
+    const suggestionAction = async () => {
+      const { error } = await supabase
+        .from('song_suggestions')
+        .insert({
+          shared_playlist_id: sharedPlaylistId,
+          suggester_user_id: session.user.id,
+          spotify_track_id: track.id,
+          spotify_track_name: track.name,
+          spotify_artist_name: track.artists.map(a => a.name).join(', '),
+          spotify_album_cover_url: track.album.images?.[0]?.url,
+        });
 
-    toast.promise(suggestionPromise, {
+      if (error) {
+        throw error;
+      }
+    };
+
+    toast.promise(suggestionAction(), {
       loading: 'Submitting suggestion...',
       success: 'Suggestion submitted for review!',
       error: 'Failed to submit suggestion.',
