@@ -43,7 +43,7 @@ serve(async (req) => {
     }
 
     webpush.setVapidDetails(
-      'mailto:admin@example.com',
+      'mailto:support@vibesphere.app',
       vapidPublicKey,
       vapidPrivateKey
     );

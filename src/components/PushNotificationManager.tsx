@@ -32,16 +32,13 @@ export default function PushNotificationManager() {
         try {
           const registration = await navigator.serviceWorker.register('/sw.js');
           
-          // Check if already subscribed
           let subscription = await registration.pushManager.getSubscription();
           
           if (subscription) {
-            // Already subscribed, maybe just ensure it's synced
             console.log('User is already subscribed.');
             return;
           }
 
-          // Ask for permission if not granted
           const permission = await window.Notification.requestPermission();
           if (permission !== 'granted') {
             console.log('Notification permission not granted.');
@@ -50,7 +47,7 @@ export default function PushNotificationManager() {
 
           const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
           if (!vapidPublicKey) {
-            console.error('VAPID public key not found.');
+            console.error('VAPID public key not found in environment.');
             toast.error('Push notification setup is incomplete on the server.');
             return;
           }
@@ -60,7 +57,6 @@ export default function PushNotificationManager() {
             applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
           });
 
-          // Send subscription to the backend
           const { error } = await supabase
             .from('push_subscriptions')
             .upsert({
@@ -78,15 +74,19 @@ export default function PushNotificationManager() {
 
         } catch (error) {
           console.error('Service Worker registration failed:', error);
+          if (error instanceof Error) {
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
+          }
+          toast.error('Could not enable notifications. Please check permissions and try again.');
         }
       }
     };
 
-    // Delay setup slightly to ensure main app is responsive
     const timer = setTimeout(setupPushNotifications, 3000);
     return () => clearTimeout(timer);
 
   }, [session]);
 
-  return null; // This component does not render anything
+  return null;
 }
