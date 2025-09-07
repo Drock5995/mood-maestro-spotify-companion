@@ -12,6 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 interface Message {
   id: string;
   sender_id: string;
+  receiver_id: string;
   content: string;
   created_at: string;
 }
@@ -140,7 +141,7 @@ export default function ChatPage() {
           <input
             type="text"
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={(e) => setNewMessage(e.g.value)}
             placeholder="Type a message..."
             className="flex-1 bg-white/5 border border-white/10 rounded-full py-2 px-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
           />
