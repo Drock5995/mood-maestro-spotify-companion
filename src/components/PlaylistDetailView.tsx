@@ -69,12 +69,8 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
   useEffect(() => {
     const fetchAudioFeatures = async () => {
       if (spotifyApi && tracks.length > 0) {
-        const trackIds = tracks.map(track => track.id).filter(id => id); // Ensure we only have valid IDs
+        const trackIds = tracks.map(track => track.id);
         try {
-          if (trackIds.length === 0) {
-            setPlaylistAudioFeatures([]);
-            return;
-          }
           const features = await spotifyApi.getAudioFeaturesForTracks(trackIds);
           setPlaylistAudioFeatures(features);
         } catch (error) {

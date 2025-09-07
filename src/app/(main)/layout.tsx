@@ -38,50 +38,21 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Try to get tokens from the database
-      let { data: spotifyTokenData, error: tokenError } = await supabase
+      const { data: spotifyTokenData, error: tokenError } = await supabase
         .from('spotify_tokens')
         .select('access_token')
         .eq('user_id', currentSession.user.id)
         .single();
 
-      // If tokens aren't in the DB, the DB trigger might be missing or this is the first login.
-      // We'll use the session tokens as a fallback and attempt to save them.
-      if ((tokenError || !spotifyTokenData) && currentSession.provider_token && currentSession.provider_refresh_token) {
-        console.warn("Tokens not found in DB. Attempting to insert from session as a fallback.");
-        
-        // Use the token from the session for this initial load
-        spotifyTokenData = { access_token: currentSession.provider_token };
-
-        // Asynchronously try to save the tokens to the database for future refreshes.
-        // We don't await this so it doesn't block the UI.
-        supabase
-          .from('spotify_tokens')
-          .insert({
-            user_id: currentSession.user.id,
-            access_token: currentSession.provider_token,
-            refresh_token: currentSession.provider_refresh_token,
-            expires_at: new Date(currentSession.expires_at! * 1000).toISOString(),
-          })
-          .then(({ error: insertError }) => {
-            if (insertError) {
-              console.error("Fallback token insert failed:", insertError.message);
-            } else {
-              console.log("Fallback token insert successful.");
-            }
-          });
-      }
-
-      const latestAccessToken = spotifyTokenData?.access_token;
-
-      if (!latestAccessToken) {
-        console.error('Failed to retrieve Spotify access token from DB or session.');
-        setError('Could not initialize Spotify connection. Please try logging in again.');
+      if (tokenError || !spotifyTokenData?.access_token) {
+        console.error('Failed to retrieve Spotify access token from DB:', tokenError?.message);
+        setError('Failed to retrieve Spotify access token. Please log in again.');
         await supabase.auth.signOut();
         return;
       }
 
-      const api = new SpotifyAPI(latestAccessToken, supabase);
+      const latestAccessToken = spotifyTokenData.access_token;
+      const api = new SpotifyAPI(latestAccessToken, supabase); // Pass supabase client here
       setSpotifyApi(api);
       await fetchData(api);
     };
