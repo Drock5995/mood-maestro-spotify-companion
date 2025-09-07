@@ -9,6 +9,10 @@ export default function LoginPage() {
   const router = useRouter();
 
   const handleLogin = async () => {
+    const redirectTo = process.env.NEXT_PUBLIC_SITE_URL
+      ? `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`
+      : 'http://localhost:3000/dashboard';
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'spotify',
       options: {
@@ -21,7 +25,7 @@ export default function LoginPage() {
           'playlist-modify-public',
           'playlist-modify-private',
         ].join(' '),
-        redirectTo: 'https://playlisterr.netlify.app/dashboard',
+        redirectTo: redirectTo,
       },
     });
 
