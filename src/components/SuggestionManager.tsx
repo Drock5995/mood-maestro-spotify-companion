@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Check, X, Clock } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSpotify } from '@/context/SpotifyContext';
-import { SpotifyTrack } from '@/lib/spotify';
 
 export interface SongSuggestion {
   id: string;
@@ -32,22 +31,36 @@ export default function SuggestionManager({ sharedPlaylistId, spotifyPlaylistId 
   const [suggestions, setSuggestions] = useState<SongSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-      setLoading(true);
-      const { data } = await supabase
-        .from('song_suggestions')
-        .select('*, profiles(display_name, avatar_url)')
-        .eq('shared_playlist_id', sharedPlaylistId)
-        .order('created_at', { ascending: false });
-      
-      if (data) {
-        setSuggestions(data as any);
-      }
-      setLoading(false);
-    };
-    fetchSuggestions();
+  const fetchSuggestions = useCallback(async () => {
+    const { data } = await supabase
+      .from('song_suggestions')
+      .select('*, profiles(display_name, avatar_url)')
+      .eq('shared_playlist_id', sharedPlaylistId)
+      .order('created_at', { ascending: false });
+    
+    if (data) {
+      setSuggestions(data as any);
+    }
+    setLoading(false);
   }, [sharedPlaylistId]);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchSuggestions();
+
+    const channel = supabase
+      .channel(`suggestions:${sharedPlaylistId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'song_suggestions', filter: `shared_playlist_id=eq.${sharedPlaylistId}` },
+        () => fetchSuggestions()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sharedPlaylistId, fetchSuggestions]);
 
   const handleSuggestion = async (suggestion: SongSuggestion, newStatus: 'accepted' | 'rejected') => {
     if (!spotifyApi) return;

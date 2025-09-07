@@ -12,6 +12,7 @@ import { useSpotify } from '@/context/SpotifyContext';
 import CommentCard, { CommentWithProfile } from './CommentCard';
 import PlaylistPoster from './PlaylistPoster';
 import SuggestionManager from './SuggestionManager';
+import SongSuggester from './SongSuggester';
 import toast from 'react-hot-toast';
 
 interface PlaylistDetailViewProps {
@@ -239,7 +240,11 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
               <p className="text-gray-500 mt-2">You must share this playlist to the community to receive song suggestions.</p>
             </div>
           ) : (
-            <SuggestionManager sharedPlaylistId={sharedPlaylistId} spotifyPlaylistId={playlist.id} />
+            <>
+              <SongSuggester sharedPlaylistId={sharedPlaylistId} />
+              <h3 className="text-xl font-bold mt-8 mb-4 border-t border-white/10 pt-6">Manage Suggestions</h3>
+              <SuggestionManager sharedPlaylistId={sharedPlaylistId} spotifyPlaylistId={playlist.id} />
+            </>
           )}
         </motion.div>
       );
