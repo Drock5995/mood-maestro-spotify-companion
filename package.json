@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@dicebear/collection": "^9.2.4",
+    "@dicebear/core": "^9.2.4",
     "@supabase/supabase-js": "^2.57.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.12",
