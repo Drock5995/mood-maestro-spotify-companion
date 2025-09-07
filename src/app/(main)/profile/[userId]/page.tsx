@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { User, Music } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +16,7 @@ interface Profile {
 export default function ProfilePage() {
   const params = useParams();
   const userId = params.userId as string;
+  const router = useRouter();
   const { session } = useSpotify();
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -142,7 +143,12 @@ export default function ProfilePage() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {playlists.map((p, index) => (
-              <CommunityPlaylistCard key={p.id} playlist={p} index={index} />
+              <CommunityPlaylistCard 
+                key={p.id} 
+                playlist={p} 
+                index={index} 
+                onClick={() => router.push(`/community?shared_id=${p.id}`)}
+              />
             ))}
           </div>
         )}
