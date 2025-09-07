@@ -14,7 +14,7 @@ import toast from 'react-hot-toast';
 function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { spotifyApi, playlists, loading, session, onPlayTrack } = useSpotify(); // Destructure onPlayTrack
+  const { spotifyApi, playlists, loading, session, onPlayTrack } = useSpotify();
 
   const [selectedPlaylist, setSelectedPlaylist] = useState<SpotifyPlaylist | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
@@ -116,17 +116,19 @@ function DashboardContent() {
 
   useEffect(() => {
     const playlistId = searchParams.get('playlist_id');
+    
     if (playlistId && playlists.length > 0) {
       const playlistToSelect = playlists.find(p => p.id === playlistId);
       if (playlistToSelect && (!selectedPlaylist || selectedPlaylist.id !== playlistId)) {
         handlePlaylistSelect(playlistToSelect);
       }
+    } else if (!playlistId && selectedPlaylist) {
+      setSelectedPlaylist(null);
+      onPlayTrack(null);
     }
-  }, [searchParams, playlists, selectedPlaylist, handlePlaylistSelect]);
+  }, [searchParams, playlists, selectedPlaylist, handlePlaylistSelect, onPlayTrack]);
 
   const handleBack = () => {
-    setSelectedPlaylist(null);
-    onPlayTrack(null); // Stop playing when going back
     router.push('/dashboard', { scroll: false });
   };
 
@@ -177,6 +179,7 @@ function DashboardContent() {
               onShareToggle={() => handleShareToggle(selectedPlaylist)}
               onPlayTrack={onPlayTrack}
               isOwner={true}
+              backButtonText="Back to Dashboard"
             />
           )}
         </AnimatePresence>

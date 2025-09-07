@@ -25,6 +25,7 @@ interface PlaylistDetailViewProps {
   onShareToggle: () => void;
   onPlayTrack: (previewUrl: string | null) => void;
   isOwner?: boolean;
+  backButtonText?: string;
 }
 
 const formatDuration = (ms: number) => {
@@ -38,7 +39,7 @@ const gradients = [
   ['#6366F1', '#8B5CF6'], ['#EF4444', '#F59E0B'],
 ];
 
-export default function PlaylistDetailView({ playlist, tracks, artists, onBack, isShared, sharedPlaylistId, onShareToggle, onPlayTrack, isOwner = false }: PlaylistDetailViewProps) {
+export default function PlaylistDetailView({ playlist, tracks, artists, onBack, isShared, sharedPlaylistId, onShareToggle, onPlayTrack, isOwner = false, backButtonText = "Back" }: PlaylistDetailViewProps) {
   const { session } = useSpotify();
   const [activeTab, setActiveTab] = useState<'overview' | 'songs' | 'social' | 'poster' | 'suggestions'>('overview');
   const [comments, setComments] = useState<CommentWithProfile[]>([]);
@@ -79,8 +80,6 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
         console.error("Error fetching comments:", error);
         toast.error("Could not load comments.");
       } else if (data) {
-        // Supabase returns the joined 'profiles' as an array, but our type expects an object.
-        // We transform the data to match the expected shape.
         const formattedComments: CommentWithProfile[] = data.map((comment: any) => ({
           ...comment,
           profiles: comment.profiles[0] || null,
@@ -272,7 +271,7 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
         <linearGradient id={`color${index}`} x1="0" y1="0" x2="1" y2="0" key={index}><stop offset="0%" stopColor={grad[0]} /><stop offset="100%" stopColor={grad[1]} /></linearGradient>
       ))}</defs></svg>
 
-      <button onClick={onBack} className="flex items-center space-x-2 text-gray-300 hover:text-white mb-6 self-start"><ArrowLeft /><span>Back to Dashboard</span></button>
+      <button onClick={onBack} className="flex items-center space-x-2 text-gray-300 hover:text-white mb-6 self-start"><ArrowLeft /><span>{backButtonText}</span></button>
 
       <header className="flex flex-col md:flex-row items-center text-center md:text-left gap-4 md:gap-8 mb-8">
         <Image src={playlist.images[0].url} alt={playlist.name} width={200} height={200} className="rounded-2xl shadow-2xl flex-shrink-0 w-32 h-32 sm:w-40 sm:h-40 md:w-52 md:h-52 object-cover" />

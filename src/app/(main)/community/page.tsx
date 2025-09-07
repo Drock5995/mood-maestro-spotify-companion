@@ -17,7 +17,6 @@ function CommunityPageContent() {
   const [playlists, setPlaylists] = useState<SharedPlaylist[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // State for detail view
   const [selectedPlaylist, setSelectedPlaylist] = useState<SharedPlaylist | null>(null);
   const [selectedPlaylistDetails, setSelectedPlaylistDetails] = useState<SpotifyPlaylist | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<SpotifyTrack[]>([]);
@@ -99,13 +98,14 @@ function CommunityPageContent() {
       if (playlistToSelect && (!selectedPlaylist || selectedPlaylist.id !== sharedId)) {
         handlePlaylistSelect(playlistToSelect);
       }
+    } else if (!sharedId && selectedPlaylist) {
+      setSelectedPlaylist(null);
+      setSelectedPlaylistDetails(null);
+      onPlayTrack(null);
     }
-  }, [searchParams, playlists, selectedPlaylist, handlePlaylistSelect]);
+  }, [searchParams, playlists, selectedPlaylist, handlePlaylistSelect, onPlayTrack]);
 
   const handleBack = () => {
-    setSelectedPlaylist(null);
-    setSelectedPlaylistDetails(null);
-    onPlayTrack(null);
     router.push('/community', { scroll: false });
   };
 
@@ -151,6 +151,7 @@ function CommunityPageContent() {
               onShareToggle={() => {}}
               onPlayTrack={onPlayTrack}
               isOwner={false}
+              backButtonText="Back to Community"
             />
           )}
         </AnimatePresence>
