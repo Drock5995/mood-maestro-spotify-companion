@@ -34,14 +34,14 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
       setSession(currentSession);
       if (currentSession?.provider_token) {
         // If there's a session with a provider token, set it and initialize SpotifyAPI
-        localStorage.setItem('spotify_access_token', currentSession.provider_token);
+        // localStorage.setItem('spotify_access_token', currentSession.provider_token); // Removed: localStorage managed by context
         const api = new SpotifyAPI(currentSession.provider_token);
         setSpotifyApi(api);
         // Attempt to fetch data immediately after setting up the API
         await fetchData(api);
       } else if (!currentSession) {
         // If no session, clear tokens and redirect to login
-        localStorage.removeItem('spotify_access_token');
+        // localStorage.removeItem('spotify_access_token'); // Removed: localStorage managed by context
         setSpotifyApi(null);
         setUser(null);
         setPlaylists([]);
@@ -58,7 +58,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
       if (initialSession) {
         setSession(initialSession);
         if (initialSession.provider_token) {
-          localStorage.setItem('spotify_access_token', initialSession.provider_token);
+          // localStorage.setItem('spotify_access_token', initialSession.provider_token); // Removed: localStorage managed by context
           const api = new SpotifyAPI(initialSession.provider_token);
           setSpotifyApi(api);
           await fetchData(api); // Fetch data with the initial session's token
@@ -90,6 +90,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
       console.error('Failed to fetch Spotify data:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
       if (err instanceof Error && err.message === 'Token expired') {
+        setSpotifyApi(null); // Immediately nullify spotifyApi in context
         await supabase.auth.signOut(); // Force sign out if token is expired
       }
     } finally {

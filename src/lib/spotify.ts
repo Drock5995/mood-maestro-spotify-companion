@@ -79,30 +79,18 @@ const SPOTIFY_BASE_URL = 'https://api.spotify.com/v1';
 export class SpotifyAPI {
   private accessToken: string | null = null;
 
-  constructor(initialAccessToken?: string) {
-    // Always prioritize the token passed during construction
-    if (initialAccessToken) {
-      this.accessToken = initialAccessToken;
-    } else if (typeof window !== 'undefined') {
-      // Fallback to localStorage only if no token is explicitly provided
-      this.accessToken = localStorage.getItem('spotify_access_token');
-    }
+  constructor(initialAccessToken: string | null) { // Changed to explicitly require token
+    this.accessToken = initialAccessToken;
   }
 
   setAccessToken(token: string) {
     this.accessToken = token;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('spotify_access_token', token);
-    }
+    // localStorage is now managed by SpotifyContext, not directly by SpotifyAPI
   }
 
   clearTokens() {
     this.accessToken = null;
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('spotify_access_token');
-      localStorage.removeItem('spotify_refresh_token');
-      localStorage.removeItem('spotify_token_expires_at');
-    }
+    // localStorage is now managed by SpotifyContext, not directly by SpotifyAPI
   }
 
   private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
