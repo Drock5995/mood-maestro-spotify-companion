@@ -34,7 +34,7 @@ export default function SongSuggester({ sharedPlaylistId }: SongSuggesterProps) 
     search();
   }, [debouncedSearchTerm, spotifyApi]);
 
-  const handleSuggest = async (track: SpotifyTrack) => {
+  const handleSuggest = (track: SpotifyTrack) => {
     if (!session?.user) {
       toast.error("You must be logged in to suggest a song.");
       return;
@@ -49,6 +49,11 @@ export default function SongSuggester({ sharedPlaylistId }: SongSuggesterProps) 
         spotify_track_name: track.name,
         spotify_artist_name: track.artists.map(a => a.name).join(', '),
         spotify_album_cover_url: track.album.images?.[0]?.url,
+      })
+      .then(({ error }) => {
+        if (error) {
+          throw error;
+        }
       });
 
     toast.promise(suggestionPromise, {
