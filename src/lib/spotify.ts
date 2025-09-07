@@ -57,6 +57,15 @@ export interface SpotifyArtist {
   uri: string;
 }
 
+export interface SpotifyAudioFeatures {
+  id: string;
+  danceability: number;
+  energy: number;
+  valence: number; // musical positivity
+  tempo: number;
+  // Add other features if needed in the future
+}
+
 export interface SpotifyTokenResponse {
   access_token: string;
   token_type: string;
@@ -162,6 +171,15 @@ export class SpotifyAPI {
       `/artists?ids=${artistIds.slice(0, 50).join(',')}`
     );
     return response.artists.filter(artist => artist !== null);
+  }
+
+  async getAudioFeaturesForTracks(trackIds: string[]): Promise<SpotifyAudioFeatures[]> {
+    if (trackIds.length === 0) return [];
+    // Spotify API limit is 100 track IDs per request
+    const response = await this.makeRequest<{ audio_features: SpotifyAudioFeatures[] }>(
+      `/audio-features?ids=${trackIds.slice(0, 100).join(',')}`
+    );
+    return response.audio_features.filter(features => features !== null);
   }
 
   async getUserTopArtists(limit: number = 5): Promise<SpotifyArtist[]> {

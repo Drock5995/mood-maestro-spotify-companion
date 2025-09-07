@@ -5,8 +5,8 @@ import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { toPng } from 'html-to-image';
-import { ArrowLeft, Music, Users, Share2, CheckCircle, Send, Play, Pause, Image as ImageIcon, GitPullRequest } from 'lucide-react';
-import { SpotifyPlaylist, SpotifyTrack, SpotifyArtist } from '@/lib/spotify';
+import { ArrowLeft, Music, Users, Share2, CheckCircle, Send, Play, Pause, Image as ImageIcon, GitPullRequest, Sparkles, Gauge, Zap, Smile } from 'lucide-react';
+import { SpotifyPlaylist, SpotifyTrack, SpotifyArtist, SpotifyAudioFeatures } from '@/lib/spotify';
 import { supabase } from '@/integrations/supabase/client';
 import { useSpotify } from '@/context/SpotifyContext';
 import CommentCard, { CommentWithProfile } from './CommentCard';
@@ -40,12 +40,13 @@ const gradients = [
 ];
 
 export default function PlaylistDetailView({ playlist, tracks, artists, onBack, isShared, sharedPlaylistId, onShareToggle, onPlayTrack, isOwner = false, backButtonText = "Back" }: PlaylistDetailViewProps) {
-  const { session } = useSpotify();
+  const { spotifyApi, session } = useSpotify();
   const [activeTab, setActiveTab] = useState<'overview' | 'songs' | 'social' | 'poster' | 'suggestions'>('overview');
   const [comments, setComments] = useState<CommentWithProfile[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPlayingTrackId, setCurrentPlayingTrackId] = useState<string | null>(null);
+  const [playlistAudioFeatures, setPlaylistAudioFeatures] = useState<SpotifyAudioFeatures[]>([]); // New state for audio features
   const posterRef = useRef<HTMLDivElement>(null);
 
   const handleDownloadPoster = useCallback(() => {
@@ -63,6 +64,25 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
         console.error('Oops, something went wrong!', err);
       });
   }, [playlist.name]);
+
+  // Effect to fetch audio features when tracks change
+  useEffect(() => {
+    const fetchAudioFeatures = async () => {
+      if (spotifyApi && tracks.length > 0) {
+        const trackIds = tracks.map(track => track.id);
+        try {
+          const features = await spotifyApi.getAudioFeaturesForTracks(trackIds);
+          setPlaylistAudioFeatures(features);
+        } catch (error) {
+          console.error("Failed to fetch audio features:", error);
+          toast.error("Failed to load audio features for this playlist.");
+        }
+      } else {
+        setPlaylistAudioFeatures([]);
+      }
+    };
+    fetchAudioFeatures();
+  }, [spotifyApi, tracks]);
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -146,8 +166,37 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
     const avgPopularity = tracks.reduce((sum, track) => sum + track.popularity, 0) / tracks.length;
     const genreCounts = artists.flatMap(a => a.genres).reduce((acc, g) => ({ ...acc, [g]: (acc[g] || 0) + 1 }), {} as Record<string, number>);
     const topGenres = Object.entries(genreCounts).sort(([, a], [, b]) => b - a).slice(0, 5).map(([name, count]) => ({ name: name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '), count }));
-    return { totalDuration: formatDuration(totalDurationMs), avgPopularity: avgPopularity.toFixed(0), topGenres };
-  }, [tracks, artists]);
+
+    // New audio features analysis
+    let avgDanceability = 0;
+    let avgEnergy = 0;
+    let avgValence = 0;
+    let avgTempo = 0;
+
+    if (playlistAudioFeatures.length > 0) {
+      avgDanceability = playlistAudioFeatures.reduce((sum, f) => sum + f.danceability, 0) / playlistAudioFeatures.length;
+      avgEnergy = playlistAudioFeatures.reduce((sum, f) => sum + f.energy, 0) / playlistAudioFeatures.length;
+      avgValence = playlistAudioFeatures.reduce((sum, f) => sum + f.valence, 0) / playlistAudioFeatures.length;
+      avgTempo = playlistAudioFeatures.reduce((sum, f) => sum + f.tempo, 0) / playlistAudioFeatures.length;
+    }
+
+    const vibeMetrics = [
+      { name: 'Danceability', value: parseFloat((avgDanceability * 100).toFixed(0)) },
+      { name: 'Energy', value: parseFloat((avgEnergy * 100).toFixed(0)) },
+      { name: 'Valence', value: parseFloat((avgValence * 100).toFixed(0)) },
+    ];
+
+    return { 
+      totalDuration: formatDuration(totalDurationMs), 
+      avgPopularity: avgPopularity.toFixed(0), 
+      topGenres,
+      avgDanceability: (avgDanceability * 100).toFixed(0),
+      avgEnergy: (avgEnergy * 100).toFixed(0),
+      avgValence: (avgValence * 100).toFixed(0),
+      avgTempo: avgTempo.toFixed(0),
+      vibeMetrics,
+    };
+  }, [tracks, artists, playlistAudioFeatures]);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -158,18 +207,63 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
             <div className="bg-white/5 p-6 rounded-xl text-center"><h3 className="text-3xl sm:text-4xl font-bold">{analysis?.totalDuration}</h3><p className="text-gray-400">Total Duration</p></div>
             <div className="bg-white/5 p-6 rounded-xl text-center"><h3 className="text-3xl sm:text-4xl font-bold">{analysis?.avgPopularity}</h3><p className="text-gray-400">Avg. Popularity</p></div>
           </div>
-          <div className="bg-white/5 p-6 rounded-xl">
-            <h3 className="text-2xl font-bold mb-4">Top Genres</h3>
-            <div style={{ width: '100%', height: 300 }}>
-              <ResponsiveContainer>
-                <BarChart data={analysis?.topGenres} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
-                  <XAxis type="number" hide /><YAxis type="category" dataKey="name" width={120} tick={{ fill: '#A0AEC0' }} axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{ fill: 'rgba(255,255,255,0.1)' }} contentStyle={{ backgroundColor: '#1A202C', border: 'none', borderRadius: '10px' }} />
-                  <Bar dataKey="count" barSize={20} radius={[0, 10, 10, 0]}>{analysis?.topGenres.map((entry, index) => <Cell key={`cell-${index}`} fill={`url(#color${index % gradients.length})`} />)}</Bar>
-                </BarChart>
-              </ResponsiveContainer>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="bg-white/5 p-6 rounded-xl">
+              <h3 className="text-2xl font-bold mb-4">Top Genres</h3>
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer>
+                  <BarChart data={analysis?.topGenres} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+                    <XAxis type="number" hide /><YAxis type="category" dataKey="name" width={120} tick={{ fill: '#A0AEC0' }} axisLine={false} tickLine={false} />
+                    <Tooltip cursor={{ fill: 'rgba(255,255,255,0.1)' }} contentStyle={{ backgroundColor: '#1A202C', border: 'none', borderRadius: '10px' }} />
+                    <Bar dataKey="count" barSize={20} radius={[0, 10, 10, 0]}>{analysis?.topGenres.map((entry, index) => <Cell key={`cell-${index}`} fill={`url(#color${index % gradients.length})`} />)}</Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="bg-white/5 p-6 rounded-xl">
+              <h3 className="text-2xl font-bold mb-4">Playlist Vibe</h3>
+              {playlistAudioFeatures.length > 0 ? (
+                <div style={{ width: '100%', height: 300 }}>
+                  <ResponsiveContainer>
+                    <BarChart data={analysis?.vibeMetrics} layout="vertical" margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
+                      <XAxis type="number" hide domain={[0, 100]} />
+                      <YAxis type="category" dataKey="name" width={120} tick={{ fill: '#A0AEC0' }} axisLine={false} tickLine={false} />
+                      <Tooltip cursor={{ fill: 'rgba(255,255,255,0.1)' }} contentStyle={{ backgroundColor: '#1A202C', border: 'none', borderRadius: '10px' }} formatter={(value: number) => `${value}%`} />
+                      <Bar dataKey="value" barSize={20} radius={[0, 10, 10, 0]}>
+                        {analysis?.vibeMetrics.map((entry, index) => (
+                          <Cell key={`vibe-cell-${index}`} fill={`url(#color${(index + 2) % gradients.length})`} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400">
+                  <Sparkles className="mr-2" /> No audio features available.
+                </div>
+              )}
             </div>
           </div>
+          {playlistAudioFeatures.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="bg-white/5 p-6 rounded-xl flex items-center space-x-4">
+                <Gauge className="w-8 h-8 text-blue-400 flex-shrink-0" />
+                <div><p className="text-gray-400 text-sm">Avg. Danceability</p><h3 className="text-2xl font-bold text-white">{analysis?.avgDanceability}%</h3></div>
+              </div>
+              <div className="bg-white/5 p-6 rounded-xl flex items-center space-x-4">
+                <Zap className="w-8 h-8 text-red-400 flex-shrink-0" />
+                <div><p className="text-gray-400 text-sm">Avg. Energy</p><h3 className="text-2xl font-bold text-white">{analysis?.avgEnergy}%</h3></div>
+              </div>
+              <div className="bg-white/5 p-6 rounded-xl flex items-center space-x-4">
+                <Smile className="w-8 h-8 text-emerald-400 flex-shrink-0" />
+                <div><p className="text-gray-400 text-sm">Avg. Valence</p><h3 className="text-2xl font-bold text-white">{analysis?.avgValence}%</h3></div>
+              </div>
+              <div className="bg-white/5 p-6 rounded-xl flex items-center space-x-4">
+                <Music className="w-8 h-8 text-purple-400 flex-shrink-0" />
+                <div><p className="text-gray-400 text-sm">Avg. Tempo</p><h3 className="text-2xl font-bold text-white">{analysis?.avgTempo} BPM</h3></div>
+              </div>
+            </div>
+          )}
         </motion.div>
       );
       case 'songs': return (
