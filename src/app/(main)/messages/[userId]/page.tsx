@@ -105,6 +105,15 @@ export default function ChatPage() {
       console.error("Error sending message:", error);
     } else if (data) {
       setMessages(prev => [...prev, data as Message]);
+      // Trigger push notification
+      supabase.functions.invoke('send-push', {
+        body: {
+          recipient_user_id: otherUserId,
+          title: `New message from ${session.user.user_metadata.display_name || 'a user'}`,
+          body: content,
+          url: `/messages/${session.user.id}`
+        }
+      }).catch(err => console.error("Error invoking send-push function:", err));
     }
   };
 

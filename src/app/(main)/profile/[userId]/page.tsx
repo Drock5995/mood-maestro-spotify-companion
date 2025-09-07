@@ -91,6 +91,15 @@ export default function ProfilePage() {
     } else {
       toast.success('Friend request sent!');
       fetchFriendshipStatus();
+      // Trigger push notification
+      supabase.functions.invoke('send-push', {
+        body: {
+          recipient_user_id: userId,
+          title: 'New Friend Request',
+          body: `${session.user.user_metadata.display_name || 'Someone'} sent you a friend request.`,
+          url: `/profile/${session.user.id}`
+        }
+      }).catch(err => console.error("Error invoking send-push function:", err));
     }
   };
 

@@ -9,7 +9,8 @@ import { SpotifyContext } from '@/context/SpotifyContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { AnimatePresence, motion } from 'framer-motion';
-import AudioPlayer from '@/components/AudioPlayer'; // Import the new AudioPlayer
+import AudioPlayer from '@/components/AudioPlayer';
+import PushNotificationManager from '@/components/PushNotificationManager'; // Import the manager
 
 function MainLayoutContent({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -131,6 +132,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
 
   return (
     <SpotifyContext.Provider value={contextValue}>
+      <PushNotificationManager />
       <div className="h-screen bg-black/20 lg:p-4 lg:flex lg:gap-4 pb-16"> {/* Added pb-16 for player */}
         {/* Desktop Sidebar */}
         <div className="hidden lg:block w-72 flex-shrink-0">
