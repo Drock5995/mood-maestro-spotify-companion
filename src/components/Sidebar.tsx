@@ -7,6 +7,7 @@ import { Home, Users, Heart, Music, LogOut, User, MessageSquare } from 'lucide-r
 import { SpotifyPlaylist } from '@/lib/spotify';
 import { useSpotify } from '@/context/SpotifyContext';
 import { supabase } from '@/integrations/supabase/client';
+import FriendRequestBell from './FriendRequestBell';
 
 interface SidebarProps {
   onPlaylistClick: (playlist: SpotifyPlaylist) => void;
@@ -38,23 +39,26 @@ export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: Sidebar
 
   return (
     <aside className="w-72 bg-black/30 backdrop-blur-lg p-4 flex flex-col space-y-6 rounded-2xl border border-white/10">
-      {user && (
-        <div className="flex items-center space-x-4 p-2">
-          {user.images?.[0]?.url && (
-            <Image
-              src={user.images[0].url}
-              alt={user.display_name || 'User'}
-              width={48}
-              height={48}
-              className="rounded-full border-2 border-purple-500"
-            />
-          )}
-          <div>
-            <h3 className="font-bold text-white text-lg truncate">{user.display_name}</h3>
-            <p className="text-gray-400 text-sm truncate">{user.email}</p>
+      <div className="flex items-center justify-between p-2">
+        {user && (
+          <div className="flex items-center space-x-4 min-w-0">
+            {user.images?.[0]?.url && (
+              <Image
+                src={user.images[0].url}
+                alt={user.display_name || 'User'}
+                width={48}
+                height={48}
+                className="rounded-full border-2 border-purple-500"
+              />
+            )}
+            <div className="min-w-0">
+              <h3 className="font-bold text-white text-lg truncate">{user.display_name}</h3>
+              <p className="text-gray-400 text-sm truncate">{user.email}</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+        <FriendRequestBell />
+      </div>
 
       <nav className="flex flex-col space-y-2">
         <NavLink href="/dashboard" icon={Home} label="Dashboard" />

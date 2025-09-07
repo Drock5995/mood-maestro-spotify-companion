@@ -1,6 +1,7 @@
 "use client";
 
 import { Menu, Music } from 'lucide-react';
+import FriendRequestBell from './FriendRequestBell';
 
 interface MobileHeaderProps {
   onMenuClick: () => void;
@@ -13,9 +14,12 @@ export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
         <Music className="w-6 h-6 text-purple-400" />
         <span className="text-xl font-bold text-white">Playlist Connect</span>
       </div>
-      <button onClick={onMenuClick} className="p-2 text-gray-300 hover:text-white">
-        <Menu className="w-6 h-6" />
-      </button>
+      <div className="flex items-center space-x-2">
+        <FriendRequestBell />
+        <button onClick={onMenuClick} className="p-2 text-gray-300 hover:text-white">
+          <Menu className="w-6 h-6" />
+        </button>
+      </div>
     </header>
   );
 }
