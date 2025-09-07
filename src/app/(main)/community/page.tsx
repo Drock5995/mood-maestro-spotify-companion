@@ -94,8 +94,8 @@ function CommunityPageContent() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(sharedPlaylistsChannel);
-      supabase.removeChannel(likesChannel);
+      supabase.removeChannel(sharedPlaylistsChannel).catch(() => {});
+      supabase.removeChannel(likesChannel).catch(() => {});
     };
   }, [fetchCommunityPlaylists]);
 

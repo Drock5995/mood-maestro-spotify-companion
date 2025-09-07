@@ -84,7 +84,7 @@ export default function ChatPage() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(channel).catch(() => {});
     };
   }, [session, otherUserId]);
 

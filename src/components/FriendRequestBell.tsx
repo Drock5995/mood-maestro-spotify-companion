@@ -61,7 +61,7 @@ export default function FriendRequestBell() {
         .subscribe();
 
       return () => {
-        supabase.removeChannel(channel);
+        supabase.removeChannel(channel).catch(() => {});
       };
     }
   }, [session]);

@@ -102,7 +102,7 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(channel).catch(() => {});
     };
   }, [sharedPlaylistId]);
 

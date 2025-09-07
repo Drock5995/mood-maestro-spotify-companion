@@ -58,7 +58,7 @@ export default function SuggestionManager({ sharedPlaylistId, spotifyPlaylistId 
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(channel).catch(() => {});
     };
   }, [sharedPlaylistId, fetchSuggestions]);
 
