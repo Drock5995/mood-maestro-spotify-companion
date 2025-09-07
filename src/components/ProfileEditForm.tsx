@@ -46,7 +46,7 @@ export default function ProfileEditForm({ currentDisplayName, currentAvatarUrl, 
     setIsSaving(false);
   };
 
-  const handleGenerateAvatar = () => {
+  const handleGenerateAvatar = async () => { // Made function async
     if (!session?.user) {
       toast.error("You must be logged in to generate an avatar.");
       return;
@@ -57,7 +57,7 @@ export default function ProfileEditForm({ currentDisplayName, currentAvatarUrl, 
       // You can add more options here for customization
       // For example: mouth: ['smile', 'cute'], eyes: ['happy', 'wink']
     });
-    const svg = avatar.toDataUriSync();
+    const svg = await avatar.toDataUri(); // Changed to await toDataUri()
     setAvatarUrl(svg);
     toast.success("New avatar generated!");
   };
