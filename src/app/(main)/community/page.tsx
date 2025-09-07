@@ -50,17 +50,52 @@ function CommunityPageContent() {
   useEffect(() => {
     fetchCommunityPlaylists();
 
-    const channel = supabase
-      .channel('community-playlists')
+    // Subscription for changes to shared_playlists (e.g., new playlist shared, playlist deleted)
+    const sharedPlaylistsChannel = supabase
+      .channel('community-playlists-main')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'shared_playlists' },
-        () => fetchCommunityPlaylists()
+        () => fetchCommunityPlaylists() // Refetch all if a playlist is added/removed/updated
+      )
+      .subscribe();
+
+    // Subscription for granular changes to playlist_likes
+    const likesChannel = supabase
+      .channel('playlist-likes-updates')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'playlist_likes' },
+        (payload) => {
+          const newLike = payload.new;
+          setPlaylists(prevPlaylists =>
+            prevPlaylists.map(p =>
+              p.id === newLike.shared_playlist_id
+                ? { ...p, playlist_likes: [...p.playlist_likes, { user_id: newLike.user_id }] }
+                : p
+            )
+          );
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'playlist_likes' },
+        (payload) => {
+          const deletedLike = payload.old;
+          setPlaylists(prevPlaylists =>
+            prevPlaylists.map(p =>
+              p.id === deletedLike.shared_playlist_id
+                ? { ...p, playlist_likes: p.playlist_likes.filter(like => like.user_id !== deletedLike.user_id) }
+                : p
+            )
+          );
+        }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(sharedPlaylistsChannel);
+      supabase.removeChannel(likesChannel);
     };
   }, [fetchCommunityPlaylists]);
 
