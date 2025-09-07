@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { User, Music, UserPlus, UserCheck, UserX, Loader2 } from 'lucide-react';
+import { User, Music, UserPlus, UserCheck, UserX, Loader2, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { CommunityPlaylistCard, SharedPlaylist } from '@/components/CommunityPlaylistCard';
 import { useSpotify } from '@/context/SpotifyContext';
@@ -142,12 +142,28 @@ export default function ProfilePage() {
     return null;
   };
 
+  const renderActionButtons = () => {
+    if (isMyProfile) return null;
+
+    return (
+      <div className="flex items-center gap-2">
+        {renderFriendButton()}
+        {friendship?.status === 'accepted' && (
+          <button onClick={() => router.push(`/messages/${userId}`)} className="flex items-center justify-center space-x-2 px-4 py-2 rounded-full font-semibold transition-all duration-300 w-40 text-sm bg-sky-600 hover:bg-sky-700 text-white">
+            <MessageCircle size={16} />
+            <span>Message</span>
+          </button>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return <div className="flex-1 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div></div>;
   }
 
   if (!profile) {
-    return <div className="flex-1 flex flex-col items-center justify-center text-center"><User className="w-16 h-16 text-gray-500 mb-4" /><h2 className="text-2xl font-bold text-gray-400">User Not Found</h2><p className="text-gray-500 mt-2">This profile could not be loaded.</p></div>;
+    return <div className="flex-1 flex flex-col items-center justify-center text-center"><User className="w-16 h-16 text-gray-500 mb-4" /><h2 className="text-2xl font-bold text-gray-400">User Not Found</h2><p className="text-gray-500 mt-2">This user could not be loaded.</p></div>;
   }
 
   return (
@@ -163,7 +179,7 @@ export default function ProfilePage() {
         <h1 className="text-3xl md:text-4xl font-extrabold text-white">{profile.display_name || 'A Spotify Listener'}</h1>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-4">
           <p className="text-gray-400 text-base">{playlists.length} {playlists.length === 1 ? 'Shared Playlist' : 'Shared Playlists'}</p>
-          {!isMyProfile && renderFriendButton()}
+          {renderActionButtons()}
         </div>
       </header>
       <div className="flex-1 overflow-y-auto pr-2">

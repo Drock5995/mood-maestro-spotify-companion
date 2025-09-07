@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Heart, Music, LogOut, User } from 'lucide-react';
+import { Home, Users, Heart, Music, LogOut, User, MessageSquare } from 'lucide-react';
 import { SpotifyPlaylist } from '@/lib/spotify';
 import { useSpotify } from '@/context/SpotifyContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -60,6 +60,7 @@ export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: Sidebar
         <NavLink href="/dashboard" icon={Home} label="Dashboard" />
         <NavLink href="/community" icon={Users} label="Community" />
         <NavLink href="/friends" icon={Heart} label="Matchmaker" />
+        <NavLink href="/messages" icon={MessageSquare} label="Messages" />
         {session?.user && <NavLink href={`/profile/${session.user.id}`} icon={User} label="My Profile" />}
       </nav>
 
