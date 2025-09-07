@@ -70,7 +70,7 @@ export default function PlaylistDetailView({ playlist, tracks, artists, onBack, 
       }
       const { data, error } = await supabase
         .from('playlist_comments')
-        .select('*, profiles(display_name, avatar_url)')
+        .select('id, comment_text, created_at, user_id, profiles(display_name, avatar_url)')
         .eq('shared_playlist_id', sharedPlaylistId)
         .order('created_at', { ascending: true });
       
