@@ -23,13 +23,13 @@ const NavLink = ({ href, icon: Icon, label }: { href: string, icon: React.Elemen
       href={href} 
       className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${
         isActive 
-          ? 'bg-purple-600/30 text-white font-semibold shadow-lg' 
+          ? 'bg-primary-600/30 text-white font-semibold shadow-lg' 
           : 'text-gray-400 hover:bg-white/10 hover:text-white'
       }`}
       aria-current={isActive ? 'page' : undefined}
       aria-label={label}
     >
-      <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-purple-300' : 'text-gray-500 group-hover:text-white'}`} aria-hidden="true" />
+      <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-primary-300' : 'text-gray-500 group-hover:text-white'}`} aria-hidden="true" />
       <span className="truncate">{label}</span>
     </Link>
   );
@@ -43,7 +43,7 @@ export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: Sidebar
   };
 
   return (
-    <aside className="w-72 bg-black/30 backdrop-blur-lg p-4 flex flex-col space-y-6 rounded-2xl border border-white/10">
+    <aside className="w-72 bg-gray-900/70 backdrop-blur-lg p-4 flex flex-col space-y-6 rounded-2xl border border-white/10"> {/* Adjusted background */}
       <div className="flex items-center justify-between p-2">
         {user && (
           <div className="flex items-center space-x-4 min-w-0">
@@ -53,7 +53,7 @@ export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: Sidebar
                 alt={`${user.display_name || 'User'}'s profile picture`}
                 width={48}
                 height={48}
-                className="rounded-full border-2 border-purple-500"
+                className="rounded-full border-2 border-primary-500" // Using primary color
               />
             )}
             <div className="min-w-0">
@@ -73,7 +73,7 @@ export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: Sidebar
         {session?.user && <NavLink href={`/profile/${session.user.id}`} icon={User} label="My Profile" />}
       </nav>
 
-      <div className="border-t border-white/10 flex-grow overflow-y-auto pt-4 pr-1 -mr-2">
+      <div className="border-t border-white/10 flex-grow overflow-y-auto pt-4 pr-1 -mr-2 custom-scrollbar"> {/* Added custom-scrollbar */}
         <h4 className="text-gray-400 font-semibold text-sm uppercase tracking-wider px-3 mb-3">Your Playlists</h4>
         <ul className="space-y-1" aria-label="Your Spotify Playlists">
           {playlists.map((playlist) => (
@@ -82,13 +82,13 @@ export default function Sidebar({ onPlaylistClick, selectedPlaylistId }: Sidebar
                 onClick={() => onPlaylistClick(playlist)}
                 className={`w-full text-left flex items-center space-x-3 px-3 py-2 rounded-lg transition-all duration-200 group ${
                   selectedPlaylistId === playlist.id
-                    ? 'bg-purple-600/30 text-white font-semibold'
+                    ? 'bg-primary-600/30 text-white font-semibold' // Using primary color
                     : 'text-gray-400 hover:bg-white/10 hover:text-white'
                 }`}
                 aria-current={selectedPlaylistId === playlist.id ? 'true' : undefined}
                 aria-label={`Select playlist ${playlist.name}`}
               >
-                <Music className={`w-5 h-5 flex-shrink-0 transition-colors ${selectedPlaylistId === playlist.id ? 'text-purple-300' : 'text-gray-500 group-hover:text-white'}`} aria-hidden="true" />
+                <Music className={`w-5 h-5 flex-shrink-0 transition-colors ${selectedPlaylistId === playlist.id ? 'text-primary-300' : 'text-gray-500 group-hover:text-white'}`} aria-hidden="true" /> {/* Using primary color */}
                 <span className="truncate">{playlist.name}</span>
               </button>
             </li>

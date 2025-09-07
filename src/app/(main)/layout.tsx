@@ -33,15 +33,10 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
     const handleAuthStateChange = async (_event: string, currentSession: Session | null) => {
       setSession(currentSession);
       if (currentSession?.provider_token) {
-        // If there's a session with a provider token, set it and initialize SpotifyAPI
-        // localStorage.setItem('spotify_access_token', currentSession.provider_token); // Removed: localStorage managed by context
         const api = new SpotifyAPI(currentSession.provider_token);
         setSpotifyApi(api);
-        // Attempt to fetch data immediately after setting up the API
         await fetchData(api);
       } else if (!currentSession) {
-        // If no session, clear tokens and redirect to login
-        // localStorage.removeItem('spotify_access_token'); // Removed: localStorage managed by context
         setSpotifyApi(null);
         setUser(null);
         setPlaylists([]);
@@ -50,20 +45,16 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
       }
     };
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
-    // Initial session check on component mount
     supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
       if (initialSession) {
         setSession(initialSession);
         if (initialSession.provider_token) {
-          // localStorage.setItem('spotify_access_token', initialSession.provider_token); // Removed: localStorage managed by context
           const api = new SpotifyAPI(initialSession.provider_token);
           setSpotifyApi(api);
-          await fetchData(api); // Fetch data with the initial session's token
+          await fetchData(api);
         } else {
-          // If session exists but no provider token (e.g., email login without Spotify), redirect
           setLoading(false);
           router.push('/login');
         }
@@ -74,7 +65,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [router]); // Only re-run on router changes
+  }, [router]);
 
   const fetchData = async (apiInstance: SpotifyAPI) => {
     setLoading(true);
@@ -90,8 +81,8 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
       console.error('Failed to fetch Spotify data:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
       if (err instanceof Error && err.message === 'Token expired') {
-        setSpotifyApi(null); // Immediately nullify spotifyApi in context
-        await supabase.auth.signOut(); // Force sign out if token is expired
+        setSpotifyApi(null);
+        await supabase.auth.signOut();
       }
     } finally {
       setLoading(false);
@@ -105,10 +96,10 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   const contextValue = { spotifyApi, user, playlists, loading, error, session, onPlayTrack: handlePlayTrack };
   const playlistId = searchParams.get('playlist_id');
 
-  if (loading && !user && !error) { // Show loading only if no user and no error yet
+  if (loading && !user && !error) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center text-white">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary-500"></div>
         <p className="mt-4 text-lg">Connecting to Spotify...</p>
       </div>
     );
@@ -127,14 +118,13 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
   }
 
   if (!session) {
-    // If not loading and no session, it means we've redirected to login or are about to
     return null;
   }
 
   return (
     <SpotifyContext.Provider value={contextValue}>
       <PushNotificationManager />
-      <div className="h-screen bg-black/20 lg:p-4 lg:flex lg:gap-4 pb-16"> {/* Added pb-16 for player */}
+      <div className="h-screen bg-gray-950 lg:p-4 lg:flex lg:gap-4 pb-20"> {/* Adjusted pb-16 to pb-20 for more player space, bg-black/20 to bg-gray-950 */}
         {/* Desktop Sidebar */}
         <div className="hidden lg:block w-72 flex-shrink-0">
           <Sidebar 
@@ -173,7 +163,7 @@ function MainLayoutContent({ children }: { children: ReactNode }) {
 
         <div className="flex-1 flex flex-col overflow-hidden">
           <MobileHeader onMenuClick={() => setIsSidebarOpen(true)} />
-          <main className={`flex-1 flex flex-col relative bg-black/30 backdrop-blur-lg lg:rounded-2xl lg:border lg:border-white/10 p-4 sm:p-6 ${isSidebarOpen ? 'overflow-y-hidden lg:overflow-y-auto' : 'overflow-y-auto'}`}>
+          <main className={`flex-1 flex flex-col relative bg-gray-900/70 backdrop-blur-lg lg:rounded-2xl lg:border lg:border-white/10 p-4 sm:p-6 ${isSidebarOpen ? 'overflow-y-hidden lg:overflow-y-auto' : 'overflow-y-auto'}`}> {/* Adjusted bg-black/30 to bg-gray-900/70 */}
             {children}
           </main>
         </div>
@@ -187,7 +177,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   return (
     <Suspense fallback={
       <div className="flex min-h-screen flex-col items-center justify-center text-white">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-500"></div>
+        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-primary-500"></div>
         <p className="mt-4 text-lg">Loading App...</p>
       </div>
     }>
