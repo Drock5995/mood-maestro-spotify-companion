@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { supabase } from '@/integrations/supabase/client';
 import { useSpotify } from '@/context/SpotifyContext';
 import toast from 'react-hot-toast';
-import { Loader2, Sparkles, Upload, Music } from 'lucide-react'; // Added Music icon
+import { Loader2, Sparkles, Upload, Music } from 'lucide-react'; // Added Upload icon
 import { createAvatar } from '@dicebear/core';
 import { funEmoji } from '@dicebear/collection'; // Using funEmoji for animated look
 
