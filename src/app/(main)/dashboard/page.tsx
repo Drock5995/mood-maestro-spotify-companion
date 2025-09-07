@@ -9,6 +9,7 @@ import { useSpotify } from '@/context/SpotifyContext';
 import PlaylistCard from '@/components/PlaylistCard';
 import PlaylistDetailView from '@/components/PlaylistDetailView';
 import { supabase } from '@/integrations/supabase/client';
+import toast from 'react-hot-toast';
 
 function DashboardContent() {
   const router = useRouter();
@@ -41,37 +42,51 @@ function DashboardContent() {
 
   const handleShareToggle = async (playlist: SpotifyPlaylist) => {
     if (!session?.user) return;
-
+  
     const isCurrentlyShared = sharedPlaylistsMap.has(playlist.id);
     const newMap = new Map(sharedPlaylistsMap);
-
-    if (isCurrentlyShared) {
-      const { error } = await supabase
-        .from('shared_playlists')
-        .delete()
-        .match({ user_id: session.user.id, spotify_playlist_id: playlist.id });
-      
-      if (!error) {
-        newMap.delete(playlist.id);
-        setSharedPlaylistsMap(newMap);
+  
+    const operationPromise = new Promise(async (resolve, reject) => {
+      if (isCurrentlyShared) {
+        const { error } = await supabase
+          .from('shared_playlists')
+          .delete()
+          .match({ user_id: session.user.id, spotify_playlist_id: playlist.id });
+        
+        if (error) {
+          reject(error);
+        } else {
+          newMap.delete(playlist.id);
+          setSharedPlaylistsMap(newMap);
+          resolve('un-shared');
+        }
+      } else {
+        const { data, error } = await supabase
+          .from('shared_playlists')
+          .insert({
+            user_id: session.user.id,
+            spotify_playlist_id: playlist.id,
+            playlist_name: playlist.name,
+            playlist_cover_url: playlist.images?.[0]?.url,
+          })
+          .select('id, spotify_playlist_id')
+          .single();
+        
+        if (error) {
+          reject(error);
+        } else if (data) {
+          newMap.set(data.spotify_playlist_id, data.id);
+          setSharedPlaylistsMap(newMap);
+          resolve('shared');
+        }
       }
-    } else {
-      const { data, error } = await supabase
-        .from('shared_playlists')
-        .insert({
-          user_id: session.user.id,
-          spotify_playlist_id: playlist.id,
-          playlist_name: playlist.name,
-          playlist_cover_url: playlist.images?.[0]?.url,
-        })
-        .select('id, spotify_playlist_id')
-        .single();
-      
-      if (!error && data) {
-        newMap.set(data.spotify_playlist_id, data.id);
-        setSharedPlaylistsMap(newMap);
-      }
-    }
+    });
+  
+    toast.promise(operationPromise, {
+      loading: isCurrentlyShared ? 'Un-sharing playlist...' : 'Sharing playlist...',
+      success: (status) => `Playlist successfully ${status}!`,
+      error: (err) => `Error: ${err.message}`,
+    });
   };
 
   const handlePlaylistSelect = useCallback(async (playlist: SpotifyPlaylist) => {

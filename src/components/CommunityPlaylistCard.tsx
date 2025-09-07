@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSpotify } from '@/context/SpotifyContext';
+import toast from 'react-hot-toast';
 
 export interface SharedPlaylist {
   id: string;
@@ -38,21 +39,35 @@ export const CommunityPlaylistCard = ({ playlist, index }: CommunityPlaylistCard
 
   const handleLike = async () => {
     if (!session?.user) {
+      toast.error("You must be logged in to like a playlist.");
       return;
     }
 
-    setIsLiked(!isLiked);
-    setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+    const wasLiked = isLiked;
+    setIsLiked(!wasLiked);
+    setLikeCount(prev => wasLiked ? prev - 1 : prev + 1);
 
-    if (isLiked) {
-      await supabase
+    if (wasLiked) {
+      const { error } = await supabase
         .from('playlist_likes')
         .delete()
         .match({ user_id: session.user.id, shared_playlist_id: playlist.id });
+      
+      if (error) {
+        toast.error("Failed to unlike playlist.");
+        setIsLiked(true);
+        setLikeCount(prev => prev + 1);
+      }
     } else {
-      await supabase
+      const { error } = await supabase
         .from('playlist_likes')
         .insert({ user_id: session.user.id, shared_playlist_id: playlist.id });
+      
+      if (error) {
+        toast.error("Failed to like playlist.");
+        setIsLiked(false);
+        setLikeCount(prev => prev - 1);
+      }
     }
   };
 
